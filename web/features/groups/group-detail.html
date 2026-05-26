@@ -12,43 +12,62 @@
   <nav>
     <div class="nav-inner">
       <a class="brand" href="groups.html">BudgetBuddy Groups</a>
-      <div class="nav-links"><a href="../dashboard/dashboard.html">Dashboard</a><a href="../profile/profile.html">Profile</a></div>
+      <div class="nav-links">
+        <a href="../dashboard/dashboard.html">Dashboard</a>
+        <a href="groups.html">Groups</a>
+        <a href="../inbox/inbox.html">Inbox</a>
+        <a href="../profile/profile.html">Profile</a>
+      </div>
     </div>
   </nav>
   <main class="page">
     <h1 id="groupTitle">Group</h1>
     <section class="grid">
-      <article class="card span-4">
-        <div class="card-header"><h3>Add Member</h3></div>
-        <div class="card-body">
-          <form id="memberForm">
-            <div class="field"><label for="memberEmail">Email</label><input id="memberEmail" type="email" required></div>
-            <button class="btn-secondary" type="submit">Add</button>
-          </form>
+      <article class="card span-12">
+        <div class="card-header"><h3>Group Summary</h3><span id="syncStatus" class="badge badge-member">Live</span></div>
+        <div class="card-body grid">
+          <div class="span-4"><strong>Total Income</strong><p id="groupIncome" class="amount amount-pill income">PHP 0.00</p></div>
+          <div class="span-4"><strong>Total Expenses</strong><p id="groupExpense" class="amount amount-pill expense">PHP 0.00</p></div>
+          <div class="span-4"><strong>Net Balance</strong><p id="groupNet" class="amount amount-pill income">PHP 0.00</p></div>
         </div>
       </article>
       <article class="card span-4">
-        <div class="card-header"><h3>Add Expense</h3></div>
+        <div class="card-header"><h3>Add Group Transaction</h3></div>
         <div class="card-body">
-          <form id="expenseForm">
-            <div class="field"><label for="paidBy">Paid by user ID</label><input id="paidBy" type="number" required></div>
-            <div class="field"><label for="expenseAmount">Amount</label><input id="expenseAmount" type="number" min="0.01" step="0.01" required></div>
-            <div class="field"><label for="expenseCategory">Category</label><input id="expenseCategory" required></div>
+          <form id="transactionForm">
+            <div class="field"><label for="transactionType">Type</label><select id="transactionType"><option value="EXPENSE">Expense</option><option value="INCOME">Income</option></select></div>
+            <div class="field"><label for="actorUserId">Payer / Contributor</label><select id="actorUserId" required></select></div>
+            <div class="field"><label for="transactionAmount">Amount</label><input id="transactionAmount" type="number" min="0.01" step="0.01" required></div>
+            <div class="field"><label for="transactionCategory">Category</label><input id="transactionCategory" required></div>
+            <div class="field"><label for="transactionDescription">Description</label><textarea id="transactionDescription"></textarea></div>
             <button class="btn-primary" type="submit">Save</button>
           </form>
         </div>
       </article>
       <article class="card span-4">
-        <div class="card-header"><h3>Balances</h3></div>
-        <div id="balances" class="card-body"><div class="empty-state">No balances yet.</div></div>
+        <div class="card-header"><h3>Invite Member</h3></div>
+        <div class="card-body">
+          <form id="inviteForm">
+            <div class="field"><label for="inviteEmail">Registered email</label><input id="inviteEmail" type="email" required></div>
+            <button class="btn-secondary" type="submit">Send Invite</button>
+          </form>
+        </div>
       </article>
-      <article class="card span-6">
-        <div class="card-header"><h3>Group Members</h3></div>
+      <article class="card span-4">
+        <div class="card-header"><h3>Members</h3></div>
         <div id="members" class="card-body"></div>
       </article>
       <article class="card span-6">
-        <div class="card-header"><h3>Shared Expenses</h3></div>
-        <div id="expenses" class="card-body"><div class="empty-state">No expenses yet — add your first one!</div></div>
+        <div class="card-header"><h3>Group Transactions</h3></div>
+        <div id="groupTransactions" class="card-body"><div class="empty-state">No group transactions yet.</div></div>
+      </article>
+      <article class="card span-6">
+        <div class="card-header"><h3>Member Balances</h3></div>
+        <div id="balances" class="card-body"><div class="empty-state">No balances yet.</div></div>
+      </article>
+      <article class="card span-12">
+        <div class="card-header"><h3>Group History</h3></div>
+        <div id="history" class="card-body"><div class="empty-state">No group history yet.</div></div>
       </article>
     </section>
   </main>

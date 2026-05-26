@@ -2,6 +2,7 @@ package edu.casas.budgetbuddy.features.auth;
 
 import edu.casas.budgetbuddy.features.auth.AuthDtos.ChangePasswordRequest;
 import edu.casas.budgetbuddy.features.auth.AuthDtos.LoginRequest;
+import edu.casas.budgetbuddy.features.auth.AuthDtos.RefreshTokenRequest;
 import edu.casas.budgetbuddy.features.auth.AuthDtos.RegisterRequest;
 import edu.casas.budgetbuddy.shared.utils.ApiResponse;
 import jakarta.validation.Valid;
@@ -36,6 +37,11 @@ public class AuthController {
         return ApiResponse.success(authService.login(request.email(), request.password()), "Login successful");
     }
 
+    @PostMapping("/refresh")
+    public ApiResponse<AuthDtos.AuthData> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return ApiResponse.success(authService.refresh(request.refreshToken()), "Session refreshed");
+    }
+
     @GetMapping("/me")
     public ApiResponse<AuthDtos.AuthUser> me(@RequestHeader(value = "Authorization", required = false) String authorization) {
         return ApiResponse.success(authService.toAuthUser(authService.requireUser(authorization)), "Profile loaded");
@@ -68,5 +74,11 @@ public class AuthController {
     public ResponseEntity<Void> logout(@RequestHeader(value = "Authorization", required = false) String authorization) {
         authService.logout(authorization);
         return ResponseEntity.status(302).location(URI.create("/")).build();
+    }
+
+    @PostMapping("/logout")
+    public ApiResponse<Void> logoutPost(@RequestHeader(value = "Authorization", required = false) String authorization) {
+        authService.logout(authorization);
+        return ApiResponse.success(null, "Logged out");
     }
 }

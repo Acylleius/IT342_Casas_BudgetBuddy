@@ -8,6 +8,7 @@ import com.budgetbuddy.mobile.R
 import com.budgetbuddy.mobile.data.RetrofitClient
 import com.budgetbuddy.mobile.model.LoginRequest
 import com.budgetbuddy.mobile.model.AuthResponse
+import com.budgetbuddy.mobile.util.SessionManager
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -20,6 +21,12 @@ class LoginActivity : AppCompatActivity() {
         val emailField = findViewById<EditText>(R.id.emailField)
         val passwordField = findViewById<EditText>(R.id.passwordField)
         val loginButton = findViewById<Button>(R.id.loginButton)
+        val createAccountButton = findViewById<Button>(R.id.createAccountButton)
+        val sessionManager = SessionManager(this)
+
+        createAccountButton.setOnClickListener {
+            startActivity(Intent(this, RegisterActivity::class.java))
+        }
 
         loginButton.setOnClickListener {
             val request = LoginRequest(
@@ -29,15 +36,17 @@ class LoginActivity : AppCompatActivity() {
 
             RetrofitClient.instance.login(request).enqueue(object: Callback<AuthResponse> {
                 override fun onResponse(call: Call<AuthResponse>, response: Response<AuthResponse>) {
-                    if (response.isSuccessful && response.body()?.success == true) {
+                    val authData = response.body()?.data
+                    if (response.isSuccessful && response.body()?.success == true && authData != null) {
+                        sessionManager.saveSession(authData.accessToken ?: authData.token, authData.user, authData.refreshToken)
                         Toast.makeText(this@LoginActivity, "Login successful!", Toast.LENGTH_SHORT).show()
 
-                        // Navigate to Dashboard
                         val intent = Intent(this@LoginActivity, DashboardActivity::class.java)
                         startActivity(intent)
                         finish()
                     } else {
-                        Toast.makeText(this@LoginActivity, "Invalid credentials", Toast.LENGTH_SHORT).show()
+                        val message = response.body()?.message ?: "Invalid credentials"
+                        Toast.makeText(this@LoginActivity, message, Toast.LENGTH_SHORT).show()
                     }
                 }
 

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BudgetBuddy Inbox</title>
+  <link rel="stylesheet" href="../../shared/styles/variables.css">
+  <link rel="stylesheet" href="../../shared/styles/components.css">
+  <link rel="stylesheet" href="../../shared/styles/layout.css">
+</head>
+<body>
+  <nav>
+    <div class="nav-inner">
+      <a class="brand" href="../dashboard/dashboard.html">BudgetBuddy Inbox</a>
+      <div class="nav-links">
+        <a href="../dashboard/dashboard.html">Dashboard</a>
+        <a href="../groups/groups.html">Groups</a>
+        <a href="../profile/profile.html">Profile</a>
+      </div>
+    </div>
+  </nav>
+  <main class="page">
+    <h1>Inbox <span id="unreadCount" class="badge badge-expense">0 unread</span></h1>
+    <section class="grid">
+      <article class="card span-12">
+        <div class="card-header">
+          <h3>Notifications</h3>
+          <div class="nav-links">
+            <select id="filter">
+              <option value="ALL">All</option>
+              <option value="UNREAD">Unread</option>
+              <option value="INVITATIONS">Invitations</option>
+              <option value="GROUP">Group Updates</option>
+            </select>
+            <button id="readAllBtn" class="btn-secondary">Mark all read</button>
+          </div>
+        </div>
+        <div id="inboxList" class="card-body"><div class="empty-state">No inbox messages yet.</div></div>
+      </article>
+    </section>
+  </main>
+  <script type="module" src="../../shared/js/auth-guard.js"></script>
+  <script type="module" src="inbox.js"></script>
+</body>
+</html>

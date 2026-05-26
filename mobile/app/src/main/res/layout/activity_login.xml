@@ -2,7 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
     android:gravity="center"
-    android:background="@color/color_bg"
+    android:background="@drawable/bg_app_gradient"
     android:padding="24dp"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -61,8 +61,8 @@
             android:layout_height="wrap_content"/>
 
         <Button
-            android:id="@+id/googleButton"
-            android:text="Continue with Google"
+            android:id="@+id/createAccountButton"
+            android:text="Create Account"
             android:textColor="@color/color_text_primary"
             android:background="@drawable/bg_button_secondary"
             android:layout_marginTop="10dp"

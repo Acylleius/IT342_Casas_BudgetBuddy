@@ -2,7 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
     android:gravity="center"
-    android:background="@color/color_bg"
+    android:background="@drawable/bg_app_gradient"
     android:padding="24dp"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -24,12 +24,34 @@
             android:layout_height="wrap_content" />
 
         <EditText
+            android:id="@+id/firstnameField"
+            android:hint="First name"
+            android:textColor="@color/color_text_primary"
+            android:textColorHint="@color/color_text_muted"
+            android:background="@drawable/bg_input"
+            android:inputType="textPersonName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <EditText
+            android:id="@+id/lastnameField"
+            android:hint="Last name"
+            android:textColor="@color/color_text_primary"
+            android:textColorHint="@color/color_text_muted"
+            android:background="@drawable/bg_input"
+            android:inputType="textPersonName"
+            android:layout_marginTop="12dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <EditText
             android:id="@+id/emailField"
             android:hint="Email"
             android:textColor="@color/color_text_primary"
             android:textColorHint="@color/color_text_muted"
             android:background="@drawable/bg_input"
             android:inputType="textEmailAddress"
+            android:layout_marginTop="12dp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"/>
 
@@ -45,11 +67,20 @@
             android:layout_height="wrap_content"/>
 
         <Button
-            android:id="@+id/loginButton"
+            android:id="@+id/registerButton"
             android:text="Register"
             android:textColor="@color/white"
             android:background="@drawable/bg_button_primary"
             android:layout_marginTop="16dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <Button
+            android:id="@+id/loginButton"
+            android:text="Back to Login"
+            android:textColor="@color/color_text_primary"
+            android:background="@drawable/bg_button_secondary"
+            android:layout_marginTop="10dp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"/>
     </LinearLayout>

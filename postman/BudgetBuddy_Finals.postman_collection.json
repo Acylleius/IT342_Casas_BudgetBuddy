@@ -1,0 +1,92 @@
+{
+  "info": {
+    "name": "BudgetBuddy Finals User API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('request completed without server error', function () {",
+          "  pm.expect(pm.response.code).to.be.below(500);",
+          "});"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080/api/v1" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "groupId", "value": "1" },
+    { "key": "transactionId", "value": "1" },
+    { "key": "groupTransactionId", "value": "1" },
+    { "key": "invitationId", "value": "1" },
+    { "key": "inboxId", "value": "1" }
+  ],
+  "item": [
+    {
+      "name": "AUTH",
+      "item": [
+        { "name": "POST /auth/register", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/auth/register", "body": { "mode": "raw", "raw": "{\"email\":\"user.a@example.com\",\"password\":\"Password123!\",\"firstname\":\"User\",\"lastname\":\"A\"}" } } },
+        { "name": "POST /auth/login", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/auth/login", "body": { "mode": "raw", "raw": "{\"email\":\"user.a@example.com\",\"password\":\"Password123!\"}" } } },
+        { "name": "POST /auth/refresh", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/auth/refresh", "body": { "mode": "raw", "raw": "{\"refreshToken\":\"{{refreshToken}}\"}" } } },
+        { "name": "POST /auth/logout", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/auth/logout" } },
+        { "name": "GET /auth/me", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/auth/me" } }
+      ]
+    },
+    {
+      "name": "TRANSACTIONS",
+      "item": [
+        { "name": "GET /transactions", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/transactions" } },
+        { "name": "POST /transactions", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/transactions", "body": { "mode": "raw", "raw": "{\"type\":\"EXPENSE\",\"amount\":500,\"category\":\"Groceries\"}" } } },
+        { "name": "PUT /transactions/{id}", "request": { "method": "PUT", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/transactions/{{transactionId}}", "body": { "mode": "raw", "raw": "{\"type\":\"EXPENSE\",\"amount\":650,\"category\":\"Groceries\"}" } } },
+        { "name": "DELETE /transactions/{id}", "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/transactions/{{transactionId}}" } }
+      ]
+    },
+    {
+      "name": "GROUPS",
+      "item": [
+        { "name": "POST /groups", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/groups", "body": { "mode": "raw", "raw": "{\"name\":\"Roommates\",\"description\":\"Finals group\"}" } } },
+        { "name": "GET /groups", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/groups" } },
+        { "name": "GET /groups/{groupId}", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/groups/{{groupId}}" } },
+        { "name": "POST /groups/{groupId}/invitations", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/groups/{{groupId}}/invitations", "body": { "mode": "raw", "raw": "{\"email\":\"user.b@example.com\"}" } } },
+        { "name": "GET /groups/{groupId}/history", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/groups/{{groupId}}/history" } }
+      ]
+    },
+    {
+      "name": "INVITATIONS",
+      "item": [
+        { "name": "GET /invitations", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/invitations" } },
+        { "name": "POST /invitations/{invitationId}/accept", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/invitations/{{invitationId}}/accept" } },
+        { "name": "POST /invitations/{invitationId}/decline", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/invitations/{{invitationId}}/decline" } }
+      ]
+    },
+    {
+      "name": "GROUP TRANSACTIONS",
+      "item": [
+        { "name": "POST /groups/{groupId}/transactions", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/groups/{{groupId}}/transactions", "body": { "mode": "raw", "raw": "{\"type\":\"EXPENSE\",\"amount\":6000,\"category\":\"Rent\",\"actorUserId\":1}" } } },
+        { "name": "GET /groups/{groupId}/transactions", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/groups/{{groupId}}/transactions" } },
+        { "name": "PUT /groups/{groupId}/transactions/{transactionId}", "request": { "method": "PUT", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/groups/{{groupId}}/transactions/{{groupTransactionId}}", "body": { "mode": "raw", "raw": "{\"type\":\"EXPENSE\",\"amount\":6500,\"category\":\"Rent\",\"actorUserId\":1}" } } },
+        { "name": "DELETE /groups/{groupId}/transactions/{transactionId}", "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/groups/{{groupId}}/transactions/{{groupTransactionId}}" } },
+        { "name": "GET /groups/{groupId}/balances", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/groups/{{groupId}}/balances" } }
+      ]
+    },
+    {
+      "name": "INBOX",
+      "item": [
+        { "name": "GET /inbox", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/inbox" } },
+        { "name": "POST /inbox/{id}/read", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/inbox/{{inboxId}}/read" } },
+        { "name": "POST /inbox/read-all", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/inbox/read-all" } }
+      ]
+    },
+    {
+      "name": "REALTIME",
+      "item": [
+        { "name": "GET /realtime/stream", "request": { "method": "GET", "url": "{{baseUrl}}/realtime/stream?token={{accessToken}}" } }
+      ]
+    }
+  ]
+}

@@ -1,13 +1,17 @@
 package edu.casas.budgetbuddy.features.groups;
 
+import edu.casas.budgetbuddy.features.activity.ActivityService;
 import edu.casas.budgetbuddy.features.auth.AuthService;
 import edu.casas.budgetbuddy.features.groups.GroupsDtos.GroupDetailDto;
+import edu.casas.budgetbuddy.features.notifications.NotificationService;
+import edu.casas.budgetbuddy.features.realtime.RealtimeService;
 import edu.casas.budgetbuddy.features.groups.GroupsDtos.GroupDto;
 import edu.casas.budgetbuddy.features.groups.GroupsDtos.MemberDto;
 import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore;
 import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore.GroupMemberRecord;
 import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore.GroupRecord;
 import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore.UserRecord;
+import edu.casas.budgetbuddy.shared.persistence.DatabasePersistenceService;
 import edu.casas.budgetbuddy.shared.utils.DomainException;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -17,16 +21,31 @@ import org.springframework.stereotype.Service;
 public class GroupsService {
     private final BudgetBuddyStore store;
     private final AuthService authService;
+    private final ActivityService activityService;
+    private final NotificationService notificationService;
+    private final RealtimeService realtimeService;
+    private final DatabasePersistenceService databasePersistenceService;
 
-    public GroupsService(BudgetBuddyStore store, AuthService authService) {
+    public GroupsService(BudgetBuddyStore store, AuthService authService, ActivityService activityService,
+                         NotificationService notificationService, RealtimeService realtimeService,
+                         DatabasePersistenceService databasePersistenceService) {
         this.store = store;
         this.authService = authService;
+        this.activityService = activityService;
+        this.notificationService = notificationService;
+        this.realtimeService = realtimeService;
+        this.databasePersistenceService = databasePersistenceService;
     }
 
     public synchronized GroupDto create(Long creatorId, String name, String description) {
         GroupRecord group = new GroupRecord(store.groupIds.getAndIncrement(), name, description, creatorId, false);
         store.groups.add(group);
-        store.members.add(new GroupMemberRecord(group.id(), creatorId, "ADMIN", false));
+        GroupMemberRecord creator = new GroupMemberRecord(group.id(), creatorId, "ADMIN", false);
+        store.members.add(creator);
+        databasePersistenceService.saveGroup(group);
+        databasePersistenceService.saveGroupMember(creator);
+        activityService.log(creatorId, "CREATE_GROUP", "GROUP", group.id(), "Created group " + name);
+        realtimeService.publish("groups-updated", toDto(group, "ADMIN"));
         return toDto(group, "ADMIN");
     }
 
@@ -53,6 +72,9 @@ public class GroupsService {
         GroupRecord current = requireGroup(groupId);
         GroupRecord replacement = new GroupRecord(current.id(), name, description, current.createdBy(), current.deleted());
         replaceGroup(replacement);
+        databasePersistenceService.saveGroup(replacement);
+        activityService.log(userId, "UPDATE_GROUP", "GROUP", groupId, "Updated group " + name);
+        realtimeService.publish("groups-updated", toDto(replacement, "ADMIN"));
         return toDto(replacement, "ADMIN");
     }
 
@@ -63,7 +85,15 @@ public class GroupsService {
         if (isMember(groupId, user.id())) {
             throw new DomainException(HttpStatus.CONFLICT, "User is already a member");
         }
-        store.members.add(new GroupMemberRecord(groupId, user.id(), "MEMBER", false));
+        GroupMemberRecord member = new GroupMemberRecord(groupId, user.id(), "MEMBER", false);
+        store.members.add(member);
+        databasePersistenceService.saveGroupMember(member);
+        GroupRecord group = requireGroup(groupId);
+        activityService.log(adminId, "ADD_GROUP_MEMBER", "GROUP", groupId,
+                "Added " + user.email() + " to " + group.name());
+        notificationService.send(user, "BudgetBuddy Notification",
+                "You were added to the BudgetBuddy group " + group.name() + ".");
+        realtimeService.publish("groups-updated", toDetail(group));
     }
 
     public synchronized void removeMember(Long adminId, Long groupId, Long memberUserId) {
@@ -73,12 +103,17 @@ public class GroupsService {
             throw new DomainException(HttpStatus.BAD_REQUEST, "Cannot remove the last admin");
         }
         replaceMember(new GroupMemberRecord(groupId, memberUserId, member.role(), true));
+        activityService.log(adminId, "REMOVE_GROUP_MEMBER", "GROUP", groupId,
+                "Removed user #" + memberUserId + " from group #" + groupId);
+        realtimeService.publish("groups-updated", toDetail(requireGroup(groupId)));
     }
 
     public synchronized void softDelete(Long userId, Long groupId) {
         requireAdmin(groupId, userId);
         GroupRecord group = requireGroup(groupId);
         replaceGroup(new GroupRecord(group.id(), group.name(), group.description(), group.createdBy(), true));
+        activityService.log(userId, "DELETE_GROUP", "GROUP", groupId, "Deleted group " + group.name());
+        realtimeService.publish("groups-updated", toDto(group, "ADMIN"));
     }
 
     public boolean isMember(Long groupId, Long userId) {

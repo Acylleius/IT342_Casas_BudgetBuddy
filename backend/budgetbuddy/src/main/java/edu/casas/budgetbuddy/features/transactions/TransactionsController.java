@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -46,6 +47,17 @@ public class TransactionsController {
             @RequestHeader(value = "Authorization", required = false) String authorization) {
         UserRecord user = authService.requireUser(authorization);
         return ApiResponse.success(transactionsService.summary(user.id()), "Summary loaded");
+    }
+
+    @PutMapping("/{transactionId}")
+    public ApiResponse<TransactionsDtos.TransactionDto> update(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @PathVariable Long transactionId,
+            @Valid @RequestBody TransactionRequest request) {
+        UserRecord user = authService.requireUser(authorization);
+        return ApiResponse.success(transactionsService.update(user.id(), transactionId, request.type(),
+                request.amount(), request.category(), request.description(), request.transactionDate()),
+                "Transaction updated");
     }
 
     @DeleteMapping("/{transactionId}")

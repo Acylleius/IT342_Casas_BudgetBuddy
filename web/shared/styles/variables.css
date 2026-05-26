@@ -1,13 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --color-bg: #F4F1FF;
-  --color-surface: #FFFFFF;
-  --color-surface-alt: #EEF2FF;
-  --color-border: #DDD6FE;
-  --color-primary: #7C6FCD;
-  --color-primary-light: #EDE9FE;
-  --color-secondary: #F9A8D4;
+  --color-bg: #F7F4FF;
+  --color-surface: rgba(255, 255, 255, 0.86);
+  --color-surface-alt: #F2F6FF;
+  --color-border: rgba(127, 127, 213, 0.22);
+  --color-primary: #7F7FD5;
+  --color-primary-light: #ECEBFF;
+  --color-secondary: #91EAE4;
+  --color-accent: #FBC2EB;
   --color-income: #6EE7B7;
   --color-income-bg: #ECFDF5;
   --color-expense: #FCA5A5;
@@ -18,15 +19,18 @@
   --color-text-muted: #9CA3AF;
   --color-success: #34D399;
   --color-danger: #F87171;
-  --shadow-card: 0 2px 16px rgba(124, 111, 205, 0.10);
-  --shadow-hover: 0 6px 24px rgba(124, 111, 205, 0.18);
+  --shadow-card: 0 12px 36px rgba(67, 56, 202, 0.10);
+  --shadow-hover: 0 18px 42px rgba(67, 56, 202, 0.18);
 }
 
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
-  background: var(--color-bg);
+  background:
+    radial-gradient(circle at top left, rgba(251, 194, 235, 0.42), transparent 30rem),
+    linear-gradient(135deg, #F7F4FF 0%, #ECFEFF 45%, #FFF7FB 100%);
+  background-attachment: fixed;
   color: var(--color-text-body);
   font-family: 'Plus Jakarta Sans', sans-serif;
 }

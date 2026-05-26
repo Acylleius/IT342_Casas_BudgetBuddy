@@ -14,6 +14,7 @@ public final class SharedExpensesDtos {
     public record SharedExpenseRequest(@NotNull @DecimalMin(value = "0.01") BigDecimal amount,
                                        @NotBlank String category,
                                        String description,
+                                       Long groupId,
                                        @NotNull Long paidBy,
                                        LocalDate expenseDate,
                                        List<Long> participantUserIds) {

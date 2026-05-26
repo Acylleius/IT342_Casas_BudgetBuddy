@@ -1,6 +1,9 @@
 package edu.casas.budgetbuddy.features.sharedexpenses;
 
+import edu.casas.budgetbuddy.features.activity.ActivityService;
 import edu.casas.budgetbuddy.features.groups.GroupsService;
+import edu.casas.budgetbuddy.features.notifications.NotificationService;
+import edu.casas.budgetbuddy.features.realtime.RealtimeService;
 import edu.casas.budgetbuddy.features.sharedexpenses.SharedExpensesDtos.BalanceDto;
 import edu.casas.budgetbuddy.features.sharedexpenses.SharedExpensesDtos.BalanceExpense;
 import edu.casas.budgetbuddy.features.sharedexpenses.SharedExpensesDtos.BalanceMember;
@@ -17,6 +20,8 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.text.NumberFormat;
+import java.util.Locale;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -24,10 +29,20 @@ import org.springframework.stereotype.Service;
 public class SharedExpensesService {
     private final BudgetBuddyStore store;
     private final GroupsService groupsService;
+    private final ActivityService activityService;
+    private final NotificationService notificationService;
+    private final RealtimeService realtimeService;
+    private final NumberFormat pesoFormat;
 
-    public SharedExpensesService(BudgetBuddyStore store, GroupsService groupsService) {
+    public SharedExpensesService(BudgetBuddyStore store, GroupsService groupsService,
+                                 ActivityService activityService, NotificationService notificationService,
+                                 RealtimeService realtimeService) {
         this.store = store;
         this.groupsService = groupsService;
+        this.activityService = activityService;
+        this.notificationService = notificationService;
+        this.realtimeService = realtimeService;
+        this.pesoFormat = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("en-PH"));
     }
 
     public synchronized SharedExpenseDto create(Long requesterId, Long groupId, BigDecimal amount, String category,
@@ -51,6 +66,11 @@ public class SharedExpensesService {
         participants.forEach(userId -> store.splits.add(new ExpenseSplitRecord(store.splitIds.getAndIncrement(),
                 expense.id(), userId, splitAmount, userId.equals(paidBy), userId.equals(paidBy) ? LocalDateTime.now() : null,
                 false)));
+        String descriptionText = actorName(requesterId) + " added " + category + " expense " + pesoFormat.format(amount);
+        activityService.log(requesterId, "CREATE_SHARED_EXPENSE", "SHARED_EXPENSE", expense.id(), descriptionText);
+        notificationService.notifyGroupMembers(requesterId, groupId, notificationMessage(groupId,
+                actorName(requesterId) + " created a shared expense", category, null, amount));
+        realtimeService.publish("shared-expenses-updated", toDto(expense));
         return toDto(expense);
     }
 
@@ -58,6 +78,13 @@ public class SharedExpensesService {
         groupsService.requireMember(groupId, requesterId);
         return store.expenses.stream()
                 .filter(expense -> expense.groupId().equals(groupId) && !expense.deleted())
+                .map(this::toDto)
+                .toList();
+    }
+
+    public List<SharedExpenseDto> listForUser(Long requesterId) {
+        return store.expenses.stream()
+                .filter(expense -> !expense.deleted() && groupsService.isMember(expense.groupId(), requesterId))
                 .map(this::toDto)
                 .toList();
     }
@@ -70,6 +97,42 @@ public class SharedExpensesService {
                 .toList();
         List<BalanceMember> members = activeMemberIds(groupId).stream().map(BalanceMember::new).toList();
         return calculateBalances(expenses, members);
+    }
+
+    public Map<Long, List<BalanceDto>> balancesForUser(Long requesterId) {
+        Map<Long, List<BalanceDto>> result = new LinkedHashMap<>();
+        store.members.stream()
+                .filter(member -> member.userId().equals(requesterId) && !member.deleted())
+                .map(BudgetBuddyStore.GroupMemberRecord::groupId)
+                .distinct()
+                .forEach(groupId -> result.put(groupId, balances(requesterId, groupId)));
+        return result;
+    }
+
+    public synchronized SharedExpenseDto update(Long requesterId, Long expenseId, BigDecimal amount,
+                                                String category, String description, LocalDate expenseDate) {
+        SharedExpenseRecord expense = requireExpense(expenseId);
+        boolean admin = false;
+        try {
+            groupsService.requireAdmin(expense.groupId(), requesterId);
+            admin = true;
+        } catch (DomainException ignored) {
+            admin = false;
+        }
+        if (!admin && !expense.paidBy().equals(requesterId)) {
+            throw new DomainException(HttpStatus.FORBIDDEN, "Only the payer or an admin can update this expense");
+        }
+        LocalDate actualDate = expenseDate == null ? expense.expenseDate() : expenseDate;
+        SharedExpenseRecord replacement = new SharedExpenseRecord(expense.id(), expense.groupId(), expense.paidBy(),
+                amount, category, description, actualDate, false);
+        replaceExpense(replacement);
+        activityService.log(requesterId, "UPDATE_SHARED_EXPENSE", "SHARED_EXPENSE", expense.id(),
+                actorName(requesterId) + " updated " + category + " from " + pesoFormat.format(expense.amount())
+                        + " to " + pesoFormat.format(amount));
+        notificationService.notifyGroupMembers(requesterId, expense.groupId(), notificationMessage(expense.groupId(),
+                actorName(requesterId) + " updated a shared expense", category, expense.amount(), amount));
+        realtimeService.publish("shared-expenses-updated", toDto(replacement));
+        return toDto(replacement);
     }
 
     public synchronized void softDelete(Long requesterId, Long expenseId) {
@@ -86,6 +149,9 @@ public class SharedExpensesService {
         }
         replaceExpense(new SharedExpenseRecord(expense.id(), expense.groupId(), expense.paidBy(), expense.amount(),
                 expense.category(), expense.description(), expense.expenseDate(), true));
+        activityService.log(requesterId, "DELETE_SHARED_EXPENSE", "SHARED_EXPENSE", expenseId,
+                actorName(requesterId) + " deleted shared expense " + expense.category());
+        realtimeService.publish("shared-expenses-updated", toDto(expense));
     }
 
     public synchronized void settle(Long requesterId, Long splitId) {
@@ -97,6 +163,12 @@ public class SharedExpensesService {
                 }
                 store.splits.set(index, new ExpenseSplitRecord(split.id(), split.expenseId(), split.userId(),
                         split.amount(), true, LocalDateTime.now(), split.deleted()));
+                SharedExpenseRecord expense = requireExpense(split.expenseId());
+                activityService.log(requesterId, "SETTLE_SPLIT", "SHARED_EXPENSE", expense.id(),
+                        actorName(requesterId) + " settled balance for " + expense.category());
+                notificationService.notifyGroupMembers(requesterId, expense.groupId(),
+                        actorName(requesterId) + " settled a balance in " + groupName(expense.groupId()));
+                realtimeService.publish("shared-expenses-updated", toDto(expense));
                 return;
             }
         }
@@ -152,6 +224,43 @@ public class SharedExpensesService {
                 return;
             }
         }
+    }
+
+    private String notificationMessage(Long groupId, String heading, String expense, BigDecimal oldAmount, BigDecimal newAmount) {
+        return """
+                %s in %s
+
+                Expense:
+                %s
+
+                Old amount:
+                %s
+
+                New amount:
+                %s
+
+                Time:
+                %s
+                """.formatted(heading, groupName(groupId), expense,
+                oldAmount == null ? "N/A" : pesoFormat.format(oldAmount),
+                newAmount == null ? "N/A" : pesoFormat.format(newAmount),
+                LocalDateTime.now());
+    }
+
+    private String actorName(Long userId) {
+        return store.users.stream()
+                .filter(user -> user.id().equals(userId))
+                .map(user -> user.firstname() + " " + user.lastname())
+                .findFirst()
+                .orElse("User #" + userId);
+    }
+
+    private String groupName(Long groupId) {
+        return store.groups.stream()
+                .filter(group -> group.id().equals(groupId))
+                .map(BudgetBuddyStore.GroupRecord::name)
+                .findFirst()
+                .orElse("Group #" + groupId);
     }
 
     private static final class BalanceAccumulator {
