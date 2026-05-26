@@ -1,16 +1,14 @@
 package com.budgetbuddy.mobile.model
 
 data class AuthResponse(
-    val success: Boolean,
-    val data: UserData?,   // nested user info + tokens
-    val error: ApiError?,  // optional error object
-    val timestamp: String
+    val success: Boolean = false,
+    val data: AuthData? = null,
+    val message: String? = null
 )
 
-data class UserData(
+data class AuthData(
     val user: User,
-    val accessToken: String,
-    val refreshToken: String
+    val token: String
 )
 
 data class User(
@@ -18,11 +16,6 @@ data class User(
     val email: String,
     val firstname: String,
     val lastname: String,
-    val role: String
-)
-
-data class ApiError(
-    val code: String,
-    val message: String,
-    val details: String?
+    val role: String,
+    val authProvider: String? = null
 )

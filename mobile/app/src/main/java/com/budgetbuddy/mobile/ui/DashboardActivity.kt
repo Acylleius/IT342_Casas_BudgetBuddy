@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.budgetbuddy.mobile.R
+import com.budgetbuddy.mobile.util.SessionManager
 
 class DashboardActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -11,6 +12,6 @@ class DashboardActivity : AppCompatActivity() {
         setContentView(R.layout.activity_dashboard)
 
         val welcomeText = findViewById<TextView>(R.id.welcomeText)
-        welcomeText.text = "Welcome to Budget Buddy!"
+        welcomeText.text = "Welcome, ${SessionManager(this).getDisplayName()}!"
     }
 }
