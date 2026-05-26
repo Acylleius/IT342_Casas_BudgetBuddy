@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class ErrorMiddleware {
@@ -22,6 +23,11 @@ public class ErrorMiddleware {
                 .map(error -> error.getField() + " " + error.getDefaultMessage())
                 .orElse("Validation failed");
         return ResponseEntity.badRequest().body(ApiResponse.error(message));
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    ResponseEntity<ApiResponse<Void>> handleNoResource(NoResourceFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error("Resource not found"));
     }
 
     @ExceptionHandler(Exception.class)

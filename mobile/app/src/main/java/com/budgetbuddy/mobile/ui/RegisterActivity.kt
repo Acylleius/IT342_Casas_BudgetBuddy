@@ -42,7 +42,7 @@ class RegisterActivity : AppCompatActivity() {
                 override fun onResponse(call: Call<AuthResponse>, response: Response<AuthResponse>) {
                     val authData = response.body()?.data
                     if (response.isSuccessful && response.body()?.success == true && authData != null) {
-                        sessionManager.saveSession(authData.token, authData.user)
+                        sessionManager.saveSession(authData.accessToken ?: authData.token, authData.user, authData.refreshToken)
                         Toast.makeText(this@RegisterActivity, "Registration successful!", Toast.LENGTH_SHORT).show()
 
                         val intent = Intent(this@RegisterActivity, DashboardActivity::class.java)

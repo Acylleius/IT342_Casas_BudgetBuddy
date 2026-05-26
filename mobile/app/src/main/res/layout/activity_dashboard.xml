@@ -2,7 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
     android:padding="24dp"
-    android:background="@color/color_bg"
+    android:background="@drawable/bg_app_gradient"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -26,6 +26,24 @@
             android:text="Your balances, transactions, and groups use the Soft Bloom Pastel theme."
             android:textColor="@color/color_text_body"
             android:layout_marginTop="8dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <Button
+            android:id="@+id/groupsButton"
+            android:text="Groups"
+            android:textColor="@color/white"
+            android:background="@drawable/bg_button_primary"
+            android:layout_marginTop="16dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <Button
+            android:id="@+id/inboxButton"
+            android:text="Inbox"
+            android:textColor="@color/color_text_primary"
+            android:background="@drawable/bg_button_secondary"
+            android:layout_marginTop="10dp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"/>
     </LinearLayout>

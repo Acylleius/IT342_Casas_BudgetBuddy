@@ -8,7 +8,9 @@ data class AuthResponse(
 
 data class AuthData(
     val user: User,
-    val token: String
+    val token: String,
+    val accessToken: String? = null,
+    val refreshToken: String? = null
 )
 
 data class User(

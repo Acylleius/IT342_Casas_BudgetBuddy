@@ -1,59 +1,93 @@
-import { api, formatPeso } from '../../shared/js/api.js';
+import { api, formatPeso, subscribeRealtime } from '../../shared/js/api.js';
 import { showToast } from '../../shared/js/toast.js';
 
 const groupId = new URLSearchParams(window.location.search).get('id');
 
 async function loadGroup() {
-  const [group, expenses, balances] = await Promise.all([
+  const [group, transactions, summary, balances, history] = await Promise.all([
     api(`/groups/${groupId}`),
-    api(`/groups/${groupId}/shared-expenses`),
-    api(`/groups/${groupId}/balances`)
+    api(`/groups/${groupId}/transactions`),
+    api(`/groups/${groupId}/transactions/summary`),
+    api(`/groups/${groupId}/balances`),
+    api(`/groups/${groupId}/history`)
   ]);
+
   document.getElementById('groupTitle').textContent = group.name;
+  document.getElementById('groupIncome').textContent = formatPeso(summary.totalIncome);
+  document.getElementById('groupExpense').textContent = formatPeso(summary.totalExpenses);
+  document.getElementById('groupNet').textContent = formatPeso(summary.netBalance);
+
+  document.getElementById('actorUserId').innerHTML = group.members.map(member => `
+    <option value="${member.userId}">${member.firstname} ${member.lastname}</option>
+  `).join('');
+
   document.getElementById('members').innerHTML = group.members.map(member => `
     <div class="list-row">
       <span>${member.firstname} ${member.lastname}<br>${member.email}</span>
       <span class="badge ${member.role === 'ADMIN' ? 'badge-admin' : 'badge-member'}">${member.role}</span>
     </div>
   `).join('');
-  document.getElementById('expenses').innerHTML = expenses.length ? expenses.map(expense => `
+
+  document.getElementById('groupTransactions').innerHTML = transactions.length ? transactions.map(transaction => `
     <div class="list-row">
-      <div><strong>${expense.category}</strong><br><span>Paid by #${expense.paidBy}</span></div>
-      <span class="amount amount-pill expense">↓ ${formatPeso(expense.amount)}</span>
+      <div><strong>${transaction.actorUsername}</strong><br><span>${transaction.type}: ${transaction.category}</span></div>
+      <span class="amount amount-pill ${transaction.type === 'INCOME' ? 'income' : 'expense'}">
+        ${transaction.type === 'INCOME' ? '+' : '-'} ${formatPeso(transaction.amount)}
+      </span>
     </div>
-  `).join('') : '<div class="empty-state">No expenses yet — add your first one!</div>';
+  `).join('') : '<div class="empty-state">No group transactions yet.</div>';
+
   document.getElementById('balances').innerHTML = balances.length ? balances.map(balance => `
     <div class="list-row">
-      <span>User #${balance.userId}</span>
+      <span>Member #${balance.userId}</span>
       <span class="amount amount-pill ${Number(balance.netBalance) >= 0 ? 'income' : 'expense'}">${formatPeso(balance.netBalance)}</span>
     </div>
   `).join('') : '<div class="empty-state">No balances yet.</div>';
+
+  document.getElementById('history').innerHTML = history.length ? history.map(item => `
+    <div class="list-row">
+      <div><strong>${item.actorUsername}</strong><br><span>${item.description}</span></div>
+      <span>${new Date(item.createdAt).toLocaleString()}</span>
+    </div>
+  `).join('') : '<div class="empty-state">No group history yet.</div>';
 }
 
-document.getElementById('memberForm').addEventListener('submit', async event => {
+document.getElementById('inviteForm').addEventListener('submit', async event => {
   event.preventDefault();
-  await api(`/groups/${groupId}/members`, {
+  await api(`/groups/${groupId}/invitations`, {
     method: 'POST',
-    body: JSON.stringify({ email: document.getElementById('memberEmail').value })
+    body: JSON.stringify({ email: document.getElementById('inviteEmail').value })
   });
   event.target.reset();
-  showToast('Member added');
+  showToast('Invite sent successfully');
   loadGroup();
 });
 
-document.getElementById('expenseForm').addEventListener('submit', async event => {
+document.getElementById('transactionForm').addEventListener('submit', async event => {
   event.preventDefault();
-  await api(`/groups/${groupId}/shared-expenses`, {
+  await api(`/groups/${groupId}/transactions`, {
     method: 'POST',
     body: JSON.stringify({
-      paidBy: Number(document.getElementById('paidBy').value),
-      amount: document.getElementById('expenseAmount').value,
-      category: document.getElementById('expenseCategory').value
+      type: document.getElementById('transactionType').value,
+      actorUserId: Number(document.getElementById('actorUserId').value),
+      amount: document.getElementById('transactionAmount').value,
+      category: document.getElementById('transactionCategory').value,
+      description: document.getElementById('transactionDescription').value
     })
   });
   event.target.reset();
-  showToast('Expense saved');
+  showToast('Group transaction saved');
   loadGroup();
 });
 
 loadGroup();
+
+const source = subscribeRealtime(eventName => {
+  if (['group-transaction-updated', 'groups-updated', 'inbox-updated'].includes(eventName)) {
+    document.getElementById('syncStatus').textContent = 'Updated';
+    loadGroup();
+  }
+});
+if (!source) {
+  document.getElementById('syncStatus').textContent = 'Refresh';
+}

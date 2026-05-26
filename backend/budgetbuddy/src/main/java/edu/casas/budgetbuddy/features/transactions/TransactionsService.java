@@ -1,9 +1,12 @@
 package edu.casas.budgetbuddy.features.transactions;
 
+import edu.casas.budgetbuddy.features.activity.ActivityService;
+import edu.casas.budgetbuddy.features.realtime.RealtimeService;
 import edu.casas.budgetbuddy.features.transactions.TransactionsDtos.SummaryDto;
 import edu.casas.budgetbuddy.features.transactions.TransactionsDtos.TransactionDto;
 import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore;
 import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore.TransactionRecord;
+import edu.casas.budgetbuddy.shared.persistence.DatabasePersistenceService;
 import edu.casas.budgetbuddy.shared.utils.DomainException;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
@@ -16,10 +19,18 @@ import org.springframework.stereotype.Service;
 @Service
 public class TransactionsService {
     private final BudgetBuddyStore store;
+    private final ActivityService activityService;
+    private final RealtimeService realtimeService;
+    private final DatabasePersistenceService databasePersistenceService;
     private final NumberFormat pesoFormat;
 
-    public TransactionsService(BudgetBuddyStore store) {
+    public TransactionsService(BudgetBuddyStore store, ActivityService activityService,
+                               RealtimeService realtimeService,
+                               DatabasePersistenceService databasePersistenceService) {
         this.store = store;
+        this.activityService = activityService;
+        this.realtimeService = realtimeService;
+        this.databasePersistenceService = databasePersistenceService;
         this.pesoFormat = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("en-PH"));
     }
 
@@ -29,6 +40,10 @@ public class TransactionsService {
         TransactionRecord record = new TransactionRecord(store.transactionIds.getAndIncrement(), userId,
                 normalizedType, amount, category, description, date == null ? LocalDate.now() : date, false);
         store.transactions.add(record);
+        databasePersistenceService.saveTransaction(record);
+        activityService.log(userId, "CREATE_TRANSACTION", "TRANSACTION", record.id(),
+                "Created " + normalizedType.toLowerCase() + " " + category + " " + pesoFormat.format(amount));
+        realtimeService.publish("dashboard-updated", toDto(record));
         return toDto(record);
     }
 
@@ -58,7 +73,33 @@ public class TransactionsService {
                 store.transactions.set(index, new TransactionRecord(transaction.id(), transaction.userId(),
                         transaction.type(), transaction.amount(), transaction.category(), transaction.description(),
                         transaction.transactionDate(), true));
+                activityService.log(userId, "DELETE_TRANSACTION", "TRANSACTION", transaction.id(),
+                        "Deleted transaction " + transaction.category());
+                realtimeService.publish("dashboard-updated", toDto(transaction));
                 return;
+            }
+        }
+        throw new DomainException(HttpStatus.NOT_FOUND, "Transaction not found");
+    }
+
+    public synchronized TransactionDto update(Long userId, Long transactionId, String type, BigDecimal amount,
+                                              String category, String description, LocalDate date) {
+        String normalizedType = normalizeType(type);
+        for (int index = 0; index < store.transactions.size(); index++) {
+            TransactionRecord transaction = store.transactions.get(index);
+            if (transaction.id().equals(transactionId) && !transaction.deleted()) {
+                if (!transaction.userId().equals(userId)) {
+                    throw new DomainException(HttpStatus.FORBIDDEN, "Cannot update another user's transaction");
+                }
+                TransactionRecord replacement = new TransactionRecord(transaction.id(), transaction.userId(),
+                        normalizedType, amount, category, description,
+                        date == null ? transaction.transactionDate() : date, false);
+                store.transactions.set(index, replacement);
+                databasePersistenceService.saveTransaction(replacement);
+                activityService.log(userId, "UPDATE_TRANSACTION", "TRANSACTION", replacement.id(),
+                        "Updated transaction " + category + " to " + pesoFormat.format(amount));
+                realtimeService.publish("dashboard-updated", toDto(replacement));
+                return toDto(replacement);
             }
         }
         throw new DomainException(HttpStatus.NOT_FOUND, "Transaction not found");

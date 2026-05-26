@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,6 +37,16 @@ public class SharedExpensesController {
                 request.participantUserIds()), "Shared expense saved"));
     }
 
+    @PostMapping("/api/v1/sharedexpenses")
+    public ResponseEntity<ApiResponse<SharedExpensesDtos.SharedExpenseDto>> createAlias(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @Valid @RequestBody SharedExpenseRequest request) {
+        UserRecord user = authService.requireUser(authorization);
+        return ResponseEntity.status(201).body(ApiResponse.success(sharedExpensesService.create(user.id(), request.groupId(),
+                request.amount(), request.category(), request.description(), request.paidBy(), request.expenseDate(),
+                request.participantUserIds()), "Shared expense saved"));
+    }
+
     @GetMapping("/api/v1/groups/{groupId}/shared-expenses")
     public ApiResponse<?> list(@RequestHeader(value = "Authorization", required = false) String authorization,
                                @PathVariable Long groupId) {
@@ -43,11 +54,33 @@ public class SharedExpensesController {
         return ApiResponse.success(sharedExpensesService.list(user.id(), groupId), "Shared expenses loaded");
     }
 
+    @GetMapping("/api/v1/sharedexpenses")
+    public ApiResponse<?> listAll(@RequestHeader(value = "Authorization", required = false) String authorization) {
+        UserRecord user = authService.requireUser(authorization);
+        return ApiResponse.success(sharedExpensesService.listForUser(user.id()), "Shared expenses loaded");
+    }
+
     @GetMapping("/api/v1/groups/{groupId}/balances")
     public ApiResponse<?> balances(@RequestHeader(value = "Authorization", required = false) String authorization,
                                    @PathVariable Long groupId) {
         UserRecord user = authService.requireUser(authorization);
         return ApiResponse.success(sharedExpensesService.balances(user.id(), groupId), "Balances loaded");
+    }
+
+    @GetMapping("/api/v1/sharedexpenses/balances")
+    public ApiResponse<?> balancesAll(@RequestHeader(value = "Authorization", required = false) String authorization) {
+        UserRecord user = authService.requireUser(authorization);
+        return ApiResponse.success(sharedExpensesService.balancesForUser(user.id()), "Balances loaded");
+    }
+
+    @PutMapping("/api/v1/shared-expenses/{expenseId}")
+    public ApiResponse<SharedExpensesDtos.SharedExpenseDto> update(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @PathVariable Long expenseId,
+            @Valid @RequestBody SharedExpenseRequest request) {
+        UserRecord user = authService.requireUser(authorization);
+        return ApiResponse.success(sharedExpensesService.update(user.id(), expenseId, request.amount(),
+                request.category(), request.description(), request.expenseDate()), "Shared expense updated");
     }
 
     @DeleteMapping("/api/v1/shared-expenses/{expenseId}")

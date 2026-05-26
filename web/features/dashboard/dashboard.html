@@ -11,9 +11,10 @@
 <body>
   <nav>
     <div class="nav-inner">
-      <a class="brand" href="dashboard.html">BudgetBuddy</a>
+        <a class="brand" href="dashboard.html">BudgetBuddy</a>
       <div class="nav-links">
         <a href="../groups/groups.html">Groups</a>
+        <a href="../inbox/inbox.html">Inbox</a>
         <a href="../profile/profile.html">Profile</a>
         <button id="logoutBtn" class="btn-secondary">Logout</button>
       </div>
@@ -51,6 +52,13 @@
       <article class="card span-8">
         <div class="card-header"><h3>Recent Transactions</h3><span id="count" class="badge badge-income">0</span></div>
         <div id="transactions" class="card-body"><div class="empty-state">No transactions yet — add your first one!</div></div>
+      </article>
+      <article class="card span-12">
+        <div class="card-header"><h3>Recent Activity</h3><span id="syncStatus" class="badge badge-member">Live</span></div>
+        <div id="activity" class="card-body">
+          <div class="list-row skeleton">&nbsp;</div>
+          <div class="list-row skeleton">&nbsp;</div>
+        </div>
       </article>
     </section>
   </main>

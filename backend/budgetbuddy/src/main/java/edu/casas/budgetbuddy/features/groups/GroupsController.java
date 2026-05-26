@@ -22,10 +22,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class GroupsController {
     private final AuthService authService;
     private final GroupsService groupsService;
+    private final GroupActivityService groupActivityService;
 
-    public GroupsController(AuthService authService, GroupsService groupsService) {
+    public GroupsController(AuthService authService, GroupsService groupsService,
+                            GroupActivityService groupActivityService) {
         this.authService = authService;
         this.groupsService = groupsService;
+        this.groupActivityService = groupActivityService;
     }
 
     @PostMapping
@@ -33,7 +36,10 @@ public class GroupsController {
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @Valid @RequestBody GroupRequest request) {
         UserRecord user = authService.requireUser(authorization);
-        return ResponseEntity.status(201).body(ApiResponse.success(groupsService.create(user.id(), request.name(), request.description()), "Group created"));
+        GroupsDtos.GroupDto group = groupsService.create(user.id(), request.name(), request.description());
+        groupActivityService.log(group.id(), user.id(), "GROUP_CREATED", "GROUP", group.id(),
+                null, group.name(), groupActivityService.displayName(user.id()) + " created group " + group.name());
+        return ResponseEntity.status(201).body(ApiResponse.success(group, "Group created"));
     }
 
     @GetMapping
@@ -67,6 +73,13 @@ public class GroupsController {
         UserRecord user = authService.requireUser(authorization);
         groupsService.addMember(user.id(), groupId, request.email());
         return ApiResponse.success(null, "Member added");
+    }
+
+    @GetMapping("/{groupId}/history")
+    public ApiResponse<?> history(@RequestHeader(value = "Authorization", required = false) String authorization,
+                                  @PathVariable Long groupId) {
+        UserRecord user = authService.requireUser(authorization);
+        return ApiResponse.success(groupActivityService.history(user.id(), groupId), "Group history loaded");
     }
 
     @DeleteMapping("/{groupId}/members/{memberUserId}")

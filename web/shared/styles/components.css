@@ -1,13 +1,18 @@
 .card {
   background: var(--color-surface);
   border: 1.5px solid var(--color-border);
-  border-radius: 20px;
+  border-radius: 18px;
   padding: 24px;
   box-shadow: var(--shadow-card);
-  transition: box-shadow 0.2s ease;
+  backdrop-filter: blur(16px);
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
 }
 
-.card:hover { box-shadow: var(--shadow-hover); }
+.card:hover {
+  border-color: rgba(127, 127, 213, 0.36);
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-2px);
+}
 
 .card-header {
   position: sticky;
@@ -39,7 +44,7 @@
 }
 
 .btn-primary {
-  background: var(--color-primary);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
   color: #fff;
   border: none;
   transition: background 0.2s, transform 0.1s;
@@ -54,6 +59,12 @@
   background: var(--color-primary-light);
   color: var(--color-primary);
   border: 1.5px solid var(--color-primary);
+  transition: transform 0.1s, box-shadow 0.2s;
+}
+
+.btn-secondary:hover {
+  box-shadow: var(--shadow-card);
+  transform: translateY(-1px);
 }
 
 .btn-danger {
@@ -135,22 +146,56 @@ input:focus, select:focus, textarea:focus {
   background: var(--color-border);
 }
 
-.toast {
+.toast-container {
   position: fixed;
   top: 18px;
   right: 18px;
-  z-index: 1000;
-  background: #fff;
-  border-left: 5px solid var(--color-success);
-  border-radius: 12px;
-  box-shadow: var(--shadow-hover);
-  padding: 14px 16px;
-  min-width: 240px;
+  z-index: 2000;
+  display: grid;
+  gap: 12px;
+  width: min(360px, calc(100vw - 32px));
 }
 
-.toast.error {
-  background: var(--color-expense-bg);
-  border-left-color: var(--color-danger);
+.toast {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid var(--color-border);
+  border-left: 5px solid var(--color-success);
+  border-radius: 14px;
+  box-shadow: var(--shadow-hover);
+  backdrop-filter: blur(14px);
+  padding: 14px 14px 14px 16px;
+  animation: toastIn 0.2s ease-out;
+}
+
+.toast p {
+  margin: 4px 0 0;
+}
+
+.toast-error { border-left-color: var(--color-danger); background: rgba(255, 241, 242, 0.92); }
+.toast-warning { border-left-color: var(--color-warning); }
+.toast-info { border-left-color: var(--color-secondary); }
+.toast-hide { animation: toastOut 0.18s ease-in forwards; }
+
+.toast-close {
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes toastOut {
+  to { opacity: 0; transform: translateY(-8px); }
 }
 
 .empty-state {
