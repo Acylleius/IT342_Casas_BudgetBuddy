@@ -16,6 +16,7 @@ import retrofit2.Response
 
 class InboxActivity : AppCompatActivity() {
     private var firstInvitationId: Long? = null
+    private var firstVerification: InboxNotification? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,6 +26,12 @@ class InboxActivity : AppCompatActivity() {
         }
         findViewById<Button>(R.id.declineInviteButton).setOnClickListener {
             respondToFirstInvite(false)
+        }
+        findViewById<Button>(R.id.acceptVerificationButton).setOnClickListener {
+            respondToVerification(true)
+        }
+        findViewById<Button>(R.id.declineVerificationButton).setOnClickListener {
+            respondToVerification(false)
         }
         loadInbox()
     }
@@ -43,19 +50,50 @@ class InboxActivity : AppCompatActivity() {
             ) {
                 val items = response.body()?.data.orEmpty()
                 firstInvitationId = items.firstOrNull { it.type == "GROUP_INVITE" && it.invitationId != null }?.invitationId
+                firstVerification = items.firstOrNull {
+                    it.type == "TRANSACTION_VERIFICATION" && it.actionStatus == "PENDING" && it.entityId != null && it.groupId != null
+                }
                 list.text = if (items.isEmpty()) {
                     "No inbox messages yet."
                 } else {
                     items.joinToString("\n\n") {
                         val state = if (it.isRead) "Read" else "Unread"
                         val inviteState = it.invitationStatus?.let { status -> " ($status)" }.orEmpty()
-                        "$state$inviteState\n${it.title}\n${it.message}\n${it.createdAt}"
+                        val actionState = it.actionStatus?.let { status -> " [$status]" }.orEmpty()
+                        "$state$inviteState$actionState\n${it.title}\n${it.message}\n${it.createdAt}"
                     }
                 }
             }
 
             override fun onFailure(call: Call<ApiResponse<List<InboxNotification>>>, t: Throwable) {
                 Toast.makeText(this@InboxActivity, "Inbox error: ${t.message}", Toast.LENGTH_SHORT).show()
+            }
+        })
+    }
+
+    private fun respondToVerification(accept: Boolean) {
+        val item = firstVerification
+        val token = SessionManager(this).getToken()
+        if (item?.groupId == null || item.entityId == null || token.isNullOrBlank()) {
+            Toast.makeText(this, "No pending verification found", Toast.LENGTH_SHORT).show()
+            return
+        }
+        RetrofitClient.instance.verifyGroupTransaction(
+            "Bearer $token",
+            item.groupId,
+            item.entityId,
+            mapOf("decision" to if (accept) "ACCEPT" else "DECLINE")
+        ).enqueue(object : Callback<ApiResponse<com.budgetbuddy.mobile.model.GroupTransaction>> {
+            override fun onResponse(
+                call: Call<ApiResponse<com.budgetbuddy.mobile.model.GroupTransaction>>,
+                response: Response<ApiResponse<com.budgetbuddy.mobile.model.GroupTransaction>>
+            ) {
+                Toast.makeText(this@InboxActivity, if (accept) "Transaction verified" else "Transaction rejected", Toast.LENGTH_SHORT).show()
+                loadInbox()
+            }
+
+            override fun onFailure(call: Call<ApiResponse<com.budgetbuddy.mobile.model.GroupTransaction>>, t: Throwable) {
+                Toast.makeText(this@InboxActivity, "Verification error: ${t.message}", Toast.LENGTH_SHORT).show()
             }
         })
     }

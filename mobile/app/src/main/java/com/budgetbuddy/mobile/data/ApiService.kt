@@ -24,6 +24,14 @@ interface ApiService {
     @POST("invitations/{invitationId}/decline")
     fun declineInvitation(@Header("Authorization") authorization: String, @Path("invitationId") invitationId: Long): Call<ApiResponse<Invitation>>
 
+    @POST("groups/{groupId}/transactions/{transactionId}/verify")
+    fun verifyGroupTransaction(
+        @Header("Authorization") authorization: String,
+        @Path("groupId") groupId: Long,
+        @Path("transactionId") transactionId: Long,
+        @Body request: Map<String, String>
+    ): Call<ApiResponse<GroupTransaction>>
+
     @GET("groups")
     fun groups(@Header("Authorization") authorization: String): Call<ApiResponse<List<Group>>>
 
@@ -32,6 +40,24 @@ interface ApiService {
 
     @GET("groups/{groupId}/history")
     fun groupHistory(@Header("Authorization") authorization: String, @Path("groupId") groupId: Long): Call<ApiResponse<List<GroupHistoryItem>>>
+
+    @POST("budgets")
+    fun createBudget(@Header("Authorization") authorization: String, @Body request: BudgetRequest): Call<ApiResponse<Budget>>
+
+    @GET("budgets/tracking")
+    fun budgetTracking(@Header("Authorization") authorization: String): Call<ApiResponse<List<BudgetTracking>>>
+
+    @POST("saving-goals")
+    fun createSavingGoal(@Header("Authorization") authorization: String, @Body request: SavingGoalRequest): Call<ApiResponse<SavingGoal>>
+
+    @GET("saving-goals")
+    fun savingGoals(@Header("Authorization") authorization: String): Call<ApiResponse<List<SavingGoal>>>
+
+    @GET("groups/{groupId}/budgets/tracking")
+    fun groupBudgetTracking(@Header("Authorization") authorization: String, @Path("groupId") groupId: Long): Call<ApiResponse<List<BudgetTracking>>>
+
+    @GET("groups/{groupId}/saving-goals")
+    fun groupSavingGoals(@Header("Authorization") authorization: String, @Path("groupId") groupId: Long): Call<ApiResponse<List<SavingGoal>>>
 }
 
 

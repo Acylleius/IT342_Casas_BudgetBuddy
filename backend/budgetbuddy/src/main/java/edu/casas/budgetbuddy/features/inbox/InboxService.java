@@ -31,8 +31,21 @@ public class InboxService {
 
     public synchronized InboxNotificationDto create(Long recipientUserId, Long groupId, Long invitationId,
                                                     String type, String title, String message) {
+        return create(recipientUserId, groupId, invitationId, null, null, null, type, title, message);
+    }
+
+    public synchronized InboxNotificationDto createAction(Long recipientUserId, Long groupId,
+                                                          String entityType, Long entityId,
+                                                          String type, String title, String message) {
+        return create(recipientUserId, groupId, null, entityType, entityId, "PENDING", type, title, message);
+    }
+
+    private synchronized InboxNotificationDto create(Long recipientUserId, Long groupId, Long invitationId,
+                                                     String entityType, Long entityId, String actionStatus,
+                                                     String type, String title, String message) {
         InboxNotificationRecord record = new InboxNotificationRecord(store.inboxIds.getAndIncrement(),
-                recipientUserId, groupId, invitationId, type, title, message, false, LocalDateTime.now());
+                recipientUserId, groupId, invitationId, entityType, entityId, actionStatus, type, title, message,
+                false, LocalDateTime.now());
         store.inboxNotifications.add(record);
         databasePersistenceService.saveInbox(record);
         InboxNotificationDto dto = toDto(record);
@@ -57,7 +70,8 @@ public class InboxService {
                 }
                 InboxNotificationRecord replacement = new InboxNotificationRecord(current.id(),
                         current.recipientUserId(), current.groupId(), current.invitationId(),
-                        current.type(), current.title(), current.message(), true, current.createdAt());
+                        current.entityType(), current.entityId(), current.actionStatus(), current.type(),
+                        current.title(), current.message(), true, current.createdAt());
                 store.inboxNotifications.set(index, replacement);
                 databasePersistenceService.saveInbox(replacement);
                 realtimeService.publishToUser(userId, "inbox-updated", unreadCount(userId));
@@ -73,7 +87,8 @@ public class InboxService {
             if (current.recipientUserId().equals(userId) && invitationId.equals(current.invitationId())) {
                 InboxNotificationRecord replacement = new InboxNotificationRecord(current.id(),
                         current.recipientUserId(), current.groupId(), current.invitationId(),
-                        current.type(), current.title(), current.message(), true, current.createdAt());
+                        current.entityType(), current.entityId(), current.actionStatus(), current.type(),
+                        current.title(), current.message(), true, current.createdAt());
                 store.inboxNotifications.set(index, replacement);
                 databasePersistenceService.saveInbox(replacement);
             }
@@ -87,7 +102,25 @@ public class InboxService {
             if (current.recipientUserId().equals(userId) && !current.read()) {
                 InboxNotificationRecord replacement = new InboxNotificationRecord(current.id(),
                         current.recipientUserId(), current.groupId(), current.invitationId(),
-                        current.type(), current.title(), current.message(), true, current.createdAt());
+                        current.entityType(), current.entityId(), current.actionStatus(), current.type(),
+                        current.title(), current.message(), true, current.createdAt());
+                store.inboxNotifications.set(index, replacement);
+                databasePersistenceService.saveInbox(replacement);
+            }
+        }
+        realtimeService.publishToUser(userId, "inbox-updated", unreadCount(userId));
+    }
+
+    public synchronized void resolveAction(Long userId, String entityType, Long entityId, String actionStatus) {
+        for (int index = 0; index < store.inboxNotifications.size(); index++) {
+            InboxNotificationRecord current = store.inboxNotifications.get(index);
+            if (current.recipientUserId().equals(userId)
+                    && entityType.equals(current.entityType())
+                    && entityId.equals(current.entityId())) {
+                InboxNotificationRecord replacement = new InboxNotificationRecord(current.id(),
+                        current.recipientUserId(), current.groupId(), current.invitationId(),
+                        current.entityType(), current.entityId(), actionStatus, current.type(),
+                        current.title(), current.message(), true, current.createdAt());
                 store.inboxNotifications.set(index, replacement);
                 databasePersistenceService.saveInbox(replacement);
             }
@@ -103,13 +136,15 @@ public class InboxService {
 
     private InboxNotificationDto toDto(InboxNotificationRecord record) {
         return new InboxNotificationDto(record.id(), record.recipientUserId(), record.groupId(),
-                record.invitationId(), invitationStatus(record.invitationId()), record.type(),
+                record.invitationId(), invitationStatus(record.invitationId()), record.entityType(),
+                record.entityId(), record.actionStatus(), record.type(),
                 record.title(), record.message(), record.read(), unreadCount(record.recipientUserId()),
                 record.createdAt());
     }
 
     public record InboxNotificationDto(Long id, Long recipientUserId, Long groupId, Long invitationId,
-                                       String invitationStatus, String type, String title, String message,
+                                       String invitationStatus, String entityType, Long entityId,
+                                       String actionStatus, String type, String title, String message,
                                        boolean isRead, long unreadCount, LocalDateTime createdAt) {
     }
 

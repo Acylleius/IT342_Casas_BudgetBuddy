@@ -19,6 +19,12 @@ class DashboardActivity : AppCompatActivity() {
         findViewById<Button>(R.id.groupsButton).setOnClickListener {
             startActivity(Intent(this, GroupsActivity::class.java))
         }
+        findViewById<Button>(R.id.budgetsButton).setOnClickListener {
+            startActivity(Intent(this, BudgetsActivity::class.java))
+        }
+        findViewById<Button>(R.id.savingGoalsButton).setOnClickListener {
+            startActivity(Intent(this, SavingGoalsActivity::class.java))
+        }
         findViewById<Button>(R.id.inboxButton).setOnClickListener {
             startActivity(Intent(this, InboxActivity::class.java))
         }
