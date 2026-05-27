@@ -1,6 +1,7 @@
 package edu.casas.budgetbuddy.features.sharedexpenses;
 
 import edu.casas.budgetbuddy.features.activity.ActivityService;
+import edu.casas.budgetbuddy.features.budgets.BudgetsService;
 import edu.casas.budgetbuddy.features.groups.GroupsService;
 import edu.casas.budgetbuddy.features.notifications.NotificationService;
 import edu.casas.budgetbuddy.features.realtime.RealtimeService;
@@ -32,16 +33,18 @@ public class SharedExpensesService {
     private final ActivityService activityService;
     private final NotificationService notificationService;
     private final RealtimeService realtimeService;
+    private final BudgetsService budgetsService;
     private final NumberFormat pesoFormat;
 
     public SharedExpensesService(BudgetBuddyStore store, GroupsService groupsService,
                                  ActivityService activityService, NotificationService notificationService,
-                                 RealtimeService realtimeService) {
+                                 RealtimeService realtimeService, BudgetsService budgetsService) {
         this.store = store;
         this.groupsService = groupsService;
         this.activityService = activityService;
         this.notificationService = notificationService;
         this.realtimeService = realtimeService;
+        this.budgetsService = budgetsService;
         this.pesoFormat = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("en-PH"));
     }
 
@@ -70,6 +73,7 @@ public class SharedExpensesService {
         activityService.log(requesterId, "CREATE_SHARED_EXPENSE", "SHARED_EXPENSE", expense.id(), descriptionText);
         notificationService.notifyGroupMembers(requesterId, groupId, notificationMessage(groupId,
                 actorName(requesterId) + " created a shared expense", category, null, amount));
+        budgetsService.evaluateGroupBudgets(groupId);
         realtimeService.publish("shared-expenses-updated", toDto(expense));
         return toDto(expense);
     }
@@ -131,6 +135,7 @@ public class SharedExpensesService {
                         + " to " + pesoFormat.format(amount));
         notificationService.notifyGroupMembers(requesterId, expense.groupId(), notificationMessage(expense.groupId(),
                 actorName(requesterId) + " updated a shared expense", category, expense.amount(), amount));
+        budgetsService.evaluateGroupBudgets(expense.groupId());
         realtimeService.publish("shared-expenses-updated", toDto(replacement));
         return toDto(replacement);
     }
@@ -151,6 +156,7 @@ public class SharedExpensesService {
                 expense.category(), expense.description(), expense.expenseDate(), true));
         activityService.log(requesterId, "DELETE_SHARED_EXPENSE", "SHARED_EXPENSE", expenseId,
                 actorName(requesterId) + " deleted shared expense " + expense.category());
+        budgetsService.evaluateGroupBudgets(expense.groupId());
         realtimeService.publish("shared-expenses-updated", toDto(expense));
     }
 

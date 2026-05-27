@@ -119,9 +119,84 @@ create table if not exists inbox_notifications (
   created_at timestamptz not null default now()
 );
 
+-- Weekly/monthly budget limits for personal and group spending.
+create table if not exists budgets (
+  id bigserial primary key,
+  scope text not null check (scope in ('PERSONAL', 'GROUP')),
+  user_id bigint references users(id) on delete cascade,
+  group_id bigint references groups(id) on delete cascade,
+  created_by_user_id bigint not null references users(id),
+  name text not null,
+  limit_amount numeric(12,2) not null check (limit_amount > 0),
+  period text not null check (period in ('WEEKLY', 'MONTHLY')),
+  category text,
+  start_date date,
+  end_date date,
+  warning_sent boolean not null default false,
+  exceeded_sent boolean not null default false,
+  deleted boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (
+    (scope = 'PERSONAL' and user_id is not null and group_id is null)
+    or
+    (scope = 'GROUP' and group_id is not null)
+  )
+);
+
+-- Per-period alert guard so warning/exceeded inbox notifications are not spammed.
+create table if not exists budget_alerts (
+  id bigserial primary key,
+  budget_id bigint not null references budgets(id) on delete cascade,
+  alert_type text not null check (alert_type in ('WARNING', 'EXCEEDED')),
+  period_start date not null,
+  period_end date not null,
+  created_at timestamptz not null default now(),
+  unique (budget_id, alert_type, period_start, period_end)
+);
+
+-- Personal and group saving goals.
+create table if not exists saving_goals (
+  id bigserial primary key,
+  scope text not null check (scope in ('PERSONAL', 'GROUP')),
+  user_id bigint references users(id) on delete cascade,
+  group_id bigint references groups(id) on delete cascade,
+  created_by_user_id bigint not null references users(id),
+  title text not null,
+  target_amount numeric(12,2) not null check (target_amount > 0),
+  current_amount numeric(12,2) not null default 0 check (current_amount >= 0),
+  deadline date,
+  status text not null default 'IN_PROGRESS' check (status in ('IN_PROGRESS', 'COMPLETED', 'OVERDUE')),
+  deleted boolean not null default false,
+  completion_notified boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (
+    (scope = 'PERSONAL' and user_id is not null and group_id is null)
+    or
+    (scope = 'GROUP' and group_id is not null)
+  )
+);
+
+-- Group saving goal contribution history.
+create table if not exists saving_goal_contributions (
+  id bigserial primary key,
+  saving_goal_id bigint not null references saving_goals(id) on delete cascade,
+  user_id bigint not null references users(id),
+  amount numeric(12,2) not null check (amount > 0),
+  note text,
+  created_at timestamptz not null default now()
+);
+
 create index if not exists idx_transactions_user_id on transactions(user_id);
 create index if not exists idx_group_members_user_id on group_members(user_id);
 create index if not exists idx_group_invitations_user_status on group_invitations(invited_user_id, status);
 create index if not exists idx_group_transactions_group_id on group_transactions(group_id);
 create index if not exists idx_group_activity_group_created on group_activity_logs(group_id, created_at desc);
 create index if not exists idx_inbox_recipient_created on inbox_notifications(recipient_user_id, created_at desc);
+create index if not exists idx_budgets_user on budgets(user_id);
+create index if not exists idx_budgets_group on budgets(group_id);
+create index if not exists idx_budget_alerts_budget_period on budget_alerts(budget_id, period_start, period_end);
+create index if not exists idx_saving_goals_user on saving_goals(user_id);
+create index if not exists idx_saving_goals_group on saving_goals(group_id);
+create index if not exists idx_saving_goal_contributions_goal on saving_goal_contributions(saving_goal_id);

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BudgetBuddy Saving Goals</title>
+  <link rel="stylesheet" href="../../shared/styles/variables.css">
+  <link rel="stylesheet" href="../../shared/styles/components.css">
+  <link rel="stylesheet" href="../../shared/styles/layout.css">
+</head>
+<body>
+  <nav>
+    <div class="nav-inner">
+      <a class="brand" href="../dashboard/dashboard.html">BudgetBuddy</a>
+      <div class="nav-links">
+        <a href="../dashboard/dashboard.html">Dashboard</a>
+        <a href="../dashboard/dashboard.html#transactions">Transactions</a>
+        <a href="../groups/groups.html">Groups</a>
+        <a href="../budgets/budgets.html">Budgets</a>
+        <a href="saving-goals.html">Saving Goals</a>
+        <a href="../inbox/inbox.html">Inbox</a>
+        <a href="../profile/profile.html">Profile</a>
+      </div>
+    </div>
+  </nav>
+  <main class="page">
+    <h1>Saving Goals</h1>
+    <section class="grid">
+      <article class="card span-4">
+        <div class="card-header"><h3>Create Goal</h3></div>
+        <div class="card-body">
+          <form id="goalForm">
+            <div class="field"><label for="title">Title</label><input id="title" required></div>
+            <div class="field"><label for="targetAmount">Target amount</label><input id="targetAmount" type="number" min="0.01" step="0.01" required></div>
+            <div class="field"><label for="currentAmount">Current amount</label><input id="currentAmount" type="number" min="0" step="0.01" value="0" required></div>
+            <div class="field"><label for="deadline">Deadline optional</label><input id="deadline" type="date"></div>
+            <button class="btn-primary" type="submit">Save Goal</button>
+          </form>
+        </div>
+      </article>
+      <article class="card span-8">
+        <div class="card-header"><h3>Personal Goals</h3><span id="goalCount" class="badge badge-member">0</span></div>
+        <div id="goalsList" class="card-body"><div class="empty-state">No saving goals yet.</div></div>
+      </article>
+    </section>
+  </main>
+  <script type="module" src="../../shared/js/auth-guard.js"></script>
+  <script type="module" src="saving-goals.js"></script>
+</body>
+</html>

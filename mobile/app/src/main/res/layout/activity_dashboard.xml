@@ -39,6 +39,24 @@
             android:layout_height="wrap_content"/>
 
         <Button
+            android:id="@+id/budgetsButton"
+            android:text="Budgets"
+            android:textColor="@color/color_text_primary"
+            android:background="@drawable/bg_button_secondary"
+            android:layout_marginTop="10dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <Button
+            android:id="@+id/savingGoalsButton"
+            android:text="Saving Goals"
+            android:textColor="@color/color_text_primary"
+            android:background="@drawable/bg_button_secondary"
+            android:layout_marginTop="10dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <Button
             android:id="@+id/inboxButton"
             android:text="Inbox"
             android:textColor="@color/color_text_primary"

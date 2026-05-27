@@ -1,6 +1,7 @@
 package edu.casas.budgetbuddy.features.transactions;
 
 import edu.casas.budgetbuddy.features.activity.ActivityService;
+import edu.casas.budgetbuddy.features.budgets.BudgetsService;
 import edu.casas.budgetbuddy.features.realtime.RealtimeService;
 import edu.casas.budgetbuddy.features.transactions.TransactionsDtos.SummaryDto;
 import edu.casas.budgetbuddy.features.transactions.TransactionsDtos.TransactionDto;
@@ -22,15 +23,18 @@ public class TransactionsService {
     private final ActivityService activityService;
     private final RealtimeService realtimeService;
     private final DatabasePersistenceService databasePersistenceService;
+    private final BudgetsService budgetsService;
     private final NumberFormat pesoFormat;
 
     public TransactionsService(BudgetBuddyStore store, ActivityService activityService,
                                RealtimeService realtimeService,
-                               DatabasePersistenceService databasePersistenceService) {
+                               DatabasePersistenceService databasePersistenceService,
+                               BudgetsService budgetsService) {
         this.store = store;
         this.activityService = activityService;
         this.realtimeService = realtimeService;
         this.databasePersistenceService = databasePersistenceService;
+        this.budgetsService = budgetsService;
         this.pesoFormat = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("en-PH"));
     }
 
@@ -43,6 +47,7 @@ public class TransactionsService {
         databasePersistenceService.saveTransaction(record);
         activityService.log(userId, "CREATE_TRANSACTION", "TRANSACTION", record.id(),
                 "Created " + normalizedType.toLowerCase() + " " + category + " " + pesoFormat.format(amount));
+        budgetsService.evaluatePersonalBudgets(userId);
         realtimeService.publish("dashboard-updated", toDto(record));
         return toDto(record);
     }
@@ -75,6 +80,7 @@ public class TransactionsService {
                         transaction.transactionDate(), true));
                 activityService.log(userId, "DELETE_TRANSACTION", "TRANSACTION", transaction.id(),
                         "Deleted transaction " + transaction.category());
+                budgetsService.evaluatePersonalBudgets(userId);
                 realtimeService.publish("dashboard-updated", toDto(transaction));
                 return;
             }
@@ -98,6 +104,7 @@ public class TransactionsService {
                 databasePersistenceService.saveTransaction(replacement);
                 activityService.log(userId, "UPDATE_TRANSACTION", "TRANSACTION", replacement.id(),
                         "Updated transaction " + category + " to " + pesoFormat.format(amount));
+                budgetsService.evaluatePersonalBudgets(userId);
                 realtimeService.publish("dashboard-updated", toDto(replacement));
                 return toDto(replacement);
             }

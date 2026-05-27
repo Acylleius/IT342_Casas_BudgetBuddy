@@ -1,12 +1,16 @@
 package edu.casas.budgetbuddy.shared.persistence;
 
 import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore;
+import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore.BudgetAlertRecord;
+import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore.BudgetRecord;
 import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore.GroupActivityLogRecord;
 import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore.GroupInvitationRecord;
 import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore.GroupMemberRecord;
 import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore.GroupRecord;
 import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore.GroupTransactionRecord;
 import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore.InboxNotificationRecord;
+import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore.SavingGoalContributionRecord;
+import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore.SavingGoalRecord;
 import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore.TransactionRecord;
 import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore.UserRecord;
 import java.time.LocalDateTime;
@@ -168,6 +172,55 @@ public class DatabasePersistenceService {
                 Timestamp.valueOf(transaction.updatedAt()));
     }
 
+    public void saveBudget(BudgetRecord budget) {
+        execute("save budget", """
+                insert into budgets (id, scope, user_id, group_id, created_by_user_id, name, limit_amount,
+                  period, category, start_date, end_date, warning_sent, exceeded_sent, deleted, created_at, updated_at)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, false, false, ?, ?, ?)
+                on conflict (id) do update set name = excluded.name, limit_amount = excluded.limit_amount,
+                  period = excluded.period, category = excluded.category, start_date = excluded.start_date,
+                  end_date = excluded.end_date, deleted = excluded.deleted, updated_at = excluded.updated_at
+                """, budget.id(), budget.scope(), budget.userId(), budget.groupId(), budget.createdByUserId(),
+                budget.name(), budget.limitAmount(), budget.period(), budget.category(),
+                budget.startDate() == null ? null : Date.valueOf(budget.startDate()),
+                budget.endDate() == null ? null : Date.valueOf(budget.endDate()), budget.deleted(),
+                Timestamp.valueOf(budget.createdAt()), Timestamp.valueOf(budget.updatedAt()));
+    }
+
+    public void saveBudgetAlert(BudgetAlertRecord alert) {
+        execute("save budget alert", """
+                insert into budget_alerts (id, budget_id, alert_type, period_start, period_end, created_at)
+                values (?, ?, ?, ?, ?, ?)
+                on conflict (budget_id, alert_type, period_start, period_end) do nothing
+                """, alert.id(), alert.budgetId(), alert.alertType(), Date.valueOf(alert.periodStart()),
+                Date.valueOf(alert.periodEnd()), Timestamp.valueOf(alert.createdAt()));
+    }
+
+    public void saveSavingGoal(SavingGoalRecord goal) {
+        execute("save saving goal", """
+                insert into saving_goals (id, scope, user_id, group_id, created_by_user_id, title,
+                  target_amount, current_amount, deadline, status, deleted, completion_notified, created_at, updated_at)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                on conflict (id) do update set title = excluded.title, target_amount = excluded.target_amount,
+                  current_amount = excluded.current_amount, deadline = excluded.deadline, status = excluded.status,
+                  deleted = excluded.deleted, completion_notified = excluded.completion_notified,
+                  updated_at = excluded.updated_at
+                """, goal.id(), goal.scope(), goal.userId(), goal.groupId(), goal.createdByUserId(), goal.title(),
+                goal.targetAmount(), goal.currentAmount(), goal.deadline() == null ? null : Date.valueOf(goal.deadline()),
+                goal.currentAmount().compareTo(goal.targetAmount()) >= 0 ? "COMPLETED" : "IN_PROGRESS",
+                goal.deleted(), goal.completionNotified(), Timestamp.valueOf(goal.createdAt()),
+                Timestamp.valueOf(goal.updatedAt()));
+    }
+
+    public void saveSavingGoalContribution(SavingGoalContributionRecord contribution) {
+        execute("save saving goal contribution", """
+                insert into saving_goal_contributions (id, saving_goal_id, user_id, amount, note, created_at)
+                values (?, ?, ?, ?, ?, ?)
+                on conflict (id) do nothing
+                """, contribution.id(), contribution.savingGoalId(), contribution.userId(),
+                contribution.amount(), contribution.note(), Timestamp.valueOf(contribution.createdAt()));
+    }
+
     private void loadDatabaseState() {
         loadUsers();
         loadTransactions();
@@ -177,6 +230,10 @@ public class DatabasePersistenceService {
         loadInbox();
         loadGroupTransactions();
         loadGroupActivity();
+        loadBudgets();
+        loadBudgetAlerts();
+        loadSavingGoals();
+        loadSavingGoalContributions();
     }
 
     private void ensureSchema() {
@@ -301,12 +358,80 @@ public class DatabasePersistenceService {
                   created_at timestamptz not null default now()
                 )
                 """,
+                """
+                create table if not exists budgets (
+                  id bigserial primary key,
+                  scope text not null,
+                  user_id bigint references users(id) on delete cascade,
+                  group_id bigint references groups(id) on delete cascade,
+                  created_by_user_id bigint not null references users(id),
+                  name text not null,
+                  limit_amount numeric(12,2) not null,
+                  period text not null,
+                  category text,
+                  start_date date,
+                  end_date date,
+                  warning_sent boolean not null default false,
+                  exceeded_sent boolean not null default false,
+                  deleted boolean not null default false,
+                  created_at timestamptz not null default now(),
+                  updated_at timestamptz not null default now()
+                )
+                """,
+                "alter table budgets add column if not exists deleted boolean not null default false",
+                "alter table budgets add column if not exists warning_sent boolean not null default false",
+                "alter table budgets add column if not exists exceeded_sent boolean not null default false",
+                """
+                create table if not exists budget_alerts (
+                  id bigserial primary key,
+                  budget_id bigint not null references budgets(id) on delete cascade,
+                  alert_type text not null,
+                  period_start date not null,
+                  period_end date not null,
+                  created_at timestamptz not null default now(),
+                  unique (budget_id, alert_type, period_start, period_end)
+                )
+                """,
+                """
+                create table if not exists saving_goals (
+                  id bigserial primary key,
+                  scope text not null,
+                  user_id bigint references users(id) on delete cascade,
+                  group_id bigint references groups(id) on delete cascade,
+                  created_by_user_id bigint not null references users(id),
+                  title text not null,
+                  target_amount numeric(12,2) not null,
+                  current_amount numeric(12,2) not null default 0,
+                  deadline date,
+                  status text not null default 'IN_PROGRESS',
+                  deleted boolean not null default false,
+                  completion_notified boolean not null default false,
+                  created_at timestamptz not null default now(),
+                  updated_at timestamptz not null default now()
+                )
+                """,
+                "alter table saving_goals add column if not exists deleted boolean not null default false",
+                "alter table saving_goals add column if not exists completion_notified boolean not null default false",
+                """
+                create table if not exists saving_goal_contributions (
+                  id bigserial primary key,
+                  saving_goal_id bigint not null references saving_goals(id) on delete cascade,
+                  user_id bigint not null references users(id),
+                  amount numeric(12,2) not null,
+                  note text,
+                  created_at timestamptz not null default now()
+                )
+                """,
                 "create index if not exists idx_transactions_user_id on transactions(user_id)",
                 "create index if not exists idx_group_members_user_id on group_members(user_id)",
                 "create index if not exists idx_group_invitations_user_status on group_invitations(invited_user_id, status)",
                 "create index if not exists idx_group_transactions_group_id on group_transactions(group_id)",
                 "create index if not exists idx_group_activity_group_created on group_activity_logs(group_id, created_at desc)",
-                "create index if not exists idx_inbox_recipient_created on inbox_notifications(recipient_user_id, created_at desc)"
+                "create index if not exists idx_inbox_recipient_created on inbox_notifications(recipient_user_id, created_at desc)",
+                "create index if not exists idx_budgets_user on budgets(user_id)",
+                "create index if not exists idx_budgets_group on budgets(group_id)",
+                "create index if not exists idx_saving_goals_user on saving_goals(user_id)",
+                "create index if not exists idx_saving_goals_group on saving_goals(group_id)"
         };
         for (String statement : statements) {
             jdbcTemplate.execute(statement);
@@ -435,9 +560,77 @@ public class DatabasePersistenceService {
         }
     }
 
+    private void loadBudgets() {
+        List<BudgetRecord> records = jdbcTemplate.query("""
+                select id, scope, user_id, group_id, created_by_user_id, name, limit_amount,
+                  period, category, start_date, end_date, deleted, created_at, updated_at
+                from budgets
+                order by id
+                """, (rs, rowNum) -> new BudgetRecord(rs.getLong("id"), rs.getString("scope"),
+                nullableLong(rs, "user_id"), nullableLong(rs, "group_id"), rs.getLong("created_by_user_id"),
+                rs.getString("name"), rs.getBigDecimal("limit_amount"), rs.getString("period"),
+                rs.getString("category"), nullableDate(rs, "start_date"), nullableDate(rs, "end_date"),
+                rs.getBoolean("deleted"), rs.getTimestamp("created_at").toLocalDateTime(),
+                rs.getTimestamp("updated_at").toLocalDateTime()));
+        if (!records.isEmpty() && store.budgets.isEmpty()) {
+            store.budgets.addAll(records);
+            store.budgetIds.set(records.stream().mapToLong(BudgetRecord::id).max().orElse(0L) + 1);
+        }
+    }
+
+    private void loadBudgetAlerts() {
+        List<BudgetAlertRecord> records = jdbcTemplate.query("""
+                select id, budget_id, alert_type, period_start, period_end, created_at
+                from budget_alerts
+                order by id
+                """, (rs, rowNum) -> new BudgetAlertRecord(rs.getLong("id"), rs.getLong("budget_id"),
+                rs.getString("alert_type"), rs.getDate("period_start").toLocalDate(),
+                rs.getDate("period_end").toLocalDate(), rs.getTimestamp("created_at").toLocalDateTime()));
+        if (!records.isEmpty() && store.budgetAlerts.isEmpty()) {
+            store.budgetAlerts.addAll(records);
+            store.budgetAlertIds.set(records.stream().mapToLong(BudgetAlertRecord::id).max().orElse(0L) + 1);
+        }
+    }
+
+    private void loadSavingGoals() {
+        List<SavingGoalRecord> records = jdbcTemplate.query("""
+                select id, scope, user_id, group_id, created_by_user_id, title, target_amount,
+                  current_amount, deadline, deleted, completion_notified, created_at, updated_at
+                from saving_goals
+                order by id
+                """, (rs, rowNum) -> new SavingGoalRecord(rs.getLong("id"), rs.getString("scope"),
+                nullableLong(rs, "user_id"), nullableLong(rs, "group_id"), rs.getLong("created_by_user_id"),
+                rs.getString("title"), rs.getBigDecimal("target_amount"), rs.getBigDecimal("current_amount"),
+                nullableDate(rs, "deadline"), rs.getBoolean("deleted"), rs.getBoolean("completion_notified"),
+                rs.getTimestamp("created_at").toLocalDateTime(), rs.getTimestamp("updated_at").toLocalDateTime()));
+        if (!records.isEmpty() && store.savingGoals.isEmpty()) {
+            store.savingGoals.addAll(records);
+            store.savingGoalIds.set(records.stream().mapToLong(SavingGoalRecord::id).max().orElse(0L) + 1);
+        }
+    }
+
+    private void loadSavingGoalContributions() {
+        List<SavingGoalContributionRecord> records = jdbcTemplate.query("""
+                select id, saving_goal_id, user_id, amount, note, created_at
+                from saving_goal_contributions
+                order by id
+                """, (rs, rowNum) -> new SavingGoalContributionRecord(rs.getLong("id"),
+                rs.getLong("saving_goal_id"), rs.getLong("user_id"), rs.getBigDecimal("amount"),
+                rs.getString("note"), rs.getTimestamp("created_at").toLocalDateTime()));
+        if (!records.isEmpty() && store.savingGoalContributions.isEmpty()) {
+            store.savingGoalContributions.addAll(records);
+            store.savingGoalContributionIds.set(records.stream().mapToLong(SavingGoalContributionRecord::id).max().orElse(0L) + 1);
+        }
+    }
+
     private Long nullableLong(java.sql.ResultSet rs, String column) throws java.sql.SQLException {
         long value = rs.getLong(column);
         return rs.wasNull() ? null : value;
+    }
+
+    private java.time.LocalDate nullableDate(java.sql.ResultSet rs, String column) throws java.sql.SQLException {
+        Date value = rs.getDate(column);
+        return value == null ? null : value.toLocalDate();
     }
 
     private void execute(String action, String sql, Object... args) {

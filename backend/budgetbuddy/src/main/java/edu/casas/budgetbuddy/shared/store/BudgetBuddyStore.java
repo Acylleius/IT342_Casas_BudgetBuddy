@@ -22,6 +22,10 @@ public class BudgetBuddyStore {
     public final AtomicLong invitationIds = new AtomicLong(1);
     public final AtomicLong inboxIds = new AtomicLong(1);
     public final AtomicLong groupTransactionIds = new AtomicLong(1);
+    public final AtomicLong budgetIds = new AtomicLong(1);
+    public final AtomicLong budgetAlertIds = new AtomicLong(1);
+    public final AtomicLong savingGoalIds = new AtomicLong(1);
+    public final AtomicLong savingGoalContributionIds = new AtomicLong(1);
     public final List<UserRecord> users = new ArrayList<>();
     public final List<TransactionRecord> transactions = new ArrayList<>();
     public final List<GroupRecord> groups = new ArrayList<>();
@@ -34,6 +38,10 @@ public class BudgetBuddyStore {
     public final List<GroupInvitationRecord> groupInvitations = new ArrayList<>();
     public final List<InboxNotificationRecord> inboxNotifications = new ArrayList<>();
     public final List<GroupTransactionRecord> groupTransactions = new ArrayList<>();
+    public final List<BudgetRecord> budgets = new ArrayList<>();
+    public final List<BudgetAlertRecord> budgetAlerts = new ArrayList<>();
+    public final List<SavingGoalRecord> savingGoals = new ArrayList<>();
+    public final List<SavingGoalContributionRecord> savingGoalContributions = new ArrayList<>();
 
     public synchronized void reset() {
         userIds.set(1);
@@ -47,6 +55,10 @@ public class BudgetBuddyStore {
         invitationIds.set(1);
         inboxIds.set(1);
         groupTransactionIds.set(1);
+        budgetIds.set(1);
+        budgetAlertIds.set(1);
+        savingGoalIds.set(1);
+        savingGoalContributionIds.set(1);
         users.clear();
         transactions.clear();
         groups.clear();
@@ -59,6 +71,10 @@ public class BudgetBuddyStore {
         groupInvitations.clear();
         inboxNotifications.clear();
         groupTransactions.clear();
+        budgets.clear();
+        budgetAlerts.clear();
+        savingGoals.clear();
+        savingGoalContributions.clear();
     }
 
     public record UserRecord(Long id, String email, String passwordHash, String firstname,
@@ -115,5 +131,26 @@ public class BudgetBuddyStore {
                                          BigDecimal amount, String category, String description,
                                          LocalDate transactionDate, LocalDateTime createdAt,
                                          LocalDateTime updatedAt, Long sharedExpenseId, boolean deleted) {
+    }
+
+    public record BudgetRecord(Long id, String scope, Long userId, Long groupId, Long createdByUserId,
+                               String name, BigDecimal limitAmount, String period, String category,
+                               LocalDate startDate, LocalDate endDate, boolean deleted,
+                               LocalDateTime createdAt, LocalDateTime updatedAt) {
+    }
+
+    public record BudgetAlertRecord(Long id, Long budgetId, String alertType,
+                                    LocalDate periodStart, LocalDate periodEnd,
+                                    LocalDateTime createdAt) {
+    }
+
+    public record SavingGoalRecord(Long id, String scope, Long userId, Long groupId, Long createdByUserId,
+                                   String title, BigDecimal targetAmount, BigDecimal currentAmount,
+                                   LocalDate deadline, boolean deleted, boolean completionNotified,
+                                   LocalDateTime createdAt, LocalDateTime updatedAt) {
+    }
+
+    public record SavingGoalContributionRecord(Long id, Long savingGoalId, Long userId,
+                                               BigDecimal amount, String note, LocalDateTime createdAt) {
     }
 }

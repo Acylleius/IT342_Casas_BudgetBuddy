@@ -16,6 +16,8 @@ function renderInbox() {
     if (filter === 'UNREAD') return !isRead(item);
     if (filter === 'INVITATIONS') return item.type === 'GROUP_INVITE';
     if (filter === 'GROUP') return item.type.startsWith('GROUP_') && item.type !== 'GROUP_INVITE';
+    if (filter === 'BUDGET') return item.type.includes('BUDGET');
+    if (filter === 'GOALS') return item.type.includes('SAVING_GOAL');
     return true;
   });
 

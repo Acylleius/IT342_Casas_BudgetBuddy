@@ -1,5 +1,6 @@
 package edu.casas.budgetbuddy.features.grouptransactions;
 
+import edu.casas.budgetbuddy.features.budgets.BudgetsService;
 import edu.casas.budgetbuddy.features.groups.GroupActivityService;
 import edu.casas.budgetbuddy.features.groups.GroupsService;
 import edu.casas.budgetbuddy.features.grouptransactions.GroupTransactionsDtos.GroupSummaryDto;
@@ -34,12 +35,14 @@ public class GroupTransactionsService {
     private final NotificationService notificationService;
     private final RealtimeService realtimeService;
     private final DatabasePersistenceService databasePersistenceService;
+    private final BudgetsService budgetsService;
     private final NumberFormat pesoFormat = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("en-PH"));
 
     public GroupTransactionsService(BudgetBuddyStore store, GroupsService groupsService,
                                     GroupActivityService groupActivityService, InboxService inboxService,
                                     NotificationService notificationService, RealtimeService realtimeService,
-                                    DatabasePersistenceService databasePersistenceService) {
+                                    DatabasePersistenceService databasePersistenceService,
+                                    BudgetsService budgetsService) {
         this.store = store;
         this.groupsService = groupsService;
         this.groupActivityService = groupActivityService;
@@ -47,6 +50,7 @@ public class GroupTransactionsService {
         this.notificationService = notificationService;
         this.realtimeService = realtimeService;
         this.databasePersistenceService = databasePersistenceService;
+        this.budgetsService = budgetsService;
     }
 
     public synchronized GroupTransactionDto create(Long requesterId, Long groupId, String type, BigDecimal amount,
@@ -76,6 +80,7 @@ public class GroupTransactionsService {
         notifyGroup(groupId, actor, "Group " + noun.toLowerCase() + " added", descriptionText,
                 "INCOME".equals(normalizedType) ? "GROUP_INCOME_CREATED" : "GROUP_EXPENSE_CREATED");
         GroupTransactionDto dto = toDto(record);
+        budgetsService.evaluateGroupBudgets(groupId);
         realtimeService.publishToUsers(activeMemberIds(groupId), "group-transaction-updated", dto);
         return dto;
     }
@@ -126,6 +131,7 @@ public class GroupTransactionsService {
                 notifyGroup(groupId, requesterId, "Group transaction updated", descriptionText,
                         "GROUP_UPDATE");
                 GroupTransactionDto dto = toDto(replacement);
+                budgetsService.evaluateGroupBudgets(groupId);
                 realtimeService.publishToUsers(activeMemberIds(groupId), "group-transaction-updated", dto);
                 return dto;
             }
@@ -152,6 +158,7 @@ public class GroupTransactionsService {
                 groupActivityService.log(groupId, requesterId, action, "GROUP_TRANSACTION", transactionId,
                         current.category(), null, descriptionText);
                 notifyGroup(groupId, requesterId, "Group transaction deleted", descriptionText, "GROUP_UPDATE");
+                budgetsService.evaluateGroupBudgets(groupId);
                 realtimeService.publishToUsers(activeMemberIds(groupId), "group-transaction-updated", toDto(current));
                 return;
             }

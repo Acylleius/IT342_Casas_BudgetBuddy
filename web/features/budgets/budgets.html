@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BudgetBuddy Budgets</title>
+  <link rel="stylesheet" href="../../shared/styles/variables.css">
+  <link rel="stylesheet" href="../../shared/styles/components.css">
+  <link rel="stylesheet" href="../../shared/styles/layout.css">
+</head>
+<body>
+  <nav>
+    <div class="nav-inner">
+      <a class="brand" href="../dashboard/dashboard.html">BudgetBuddy</a>
+      <div class="nav-links">
+        <a href="../dashboard/dashboard.html">Dashboard</a>
+        <a href="../dashboard/dashboard.html#transactions">Transactions</a>
+        <a href="../groups/groups.html">Groups</a>
+        <a href="budgets.html">Budgets</a>
+        <a href="../saving-goals/saving-goals.html">Saving Goals</a>
+        <a href="../inbox/inbox.html">Inbox</a>
+        <a href="../profile/profile.html">Profile</a>
+      </div>
+    </div>
+  </nav>
+  <main class="page">
+    <h1>Budgets</h1>
+    <section class="grid">
+      <article class="card span-4">
+        <div class="card-header"><h3>Create Budget</h3></div>
+        <div class="card-body">
+          <form id="budgetForm">
+            <div class="field"><label for="budgetName">Name</label><input id="budgetName" required></div>
+            <div class="field"><label for="limitAmount">Limit amount</label><input id="limitAmount" type="number" min="0.01" step="0.01" required></div>
+            <div class="field"><label for="period">Period</label><select id="period"><option value="WEEKLY">Weekly</option><option value="MONTHLY">Monthly</option></select></div>
+            <div class="field"><label for="category">Category optional</label><input id="category"></div>
+            <div class="field"><label for="startDate">Start date optional</label><input id="startDate" type="date"></div>
+            <div class="field"><label for="endDate">End date optional</label><input id="endDate" type="date"></div>
+            <button class="btn-primary" type="submit">Save Budget</button>
+          </form>
+        </div>
+      </article>
+      <article class="card span-8">
+        <div class="card-header"><h3>Budget Tracking</h3><span id="budgetCount" class="badge badge-member">0</span></div>
+        <div id="budgetTracking" class="card-body"><div class="empty-state">No budgets yet.</div></div>
+      </article>
+    </section>
+  </main>
+  <script type="module" src="../../shared/js/auth-guard.js"></script>
+  <script type="module" src="budgets.js"></script>
+</body>
+</html>

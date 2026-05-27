@@ -43,3 +43,44 @@ data class GroupHistoryItem(
     val description: String,
     val createdAt: String
 )
+
+data class BudgetRequest(
+    val name: String,
+    val limitAmount: Double,
+    val period: String,
+    val category: String? = null
+)
+
+data class Budget(
+    val id: Long,
+    val scope: String,
+    val name: String,
+    val limitAmount: Double,
+    val period: String,
+    val category: String?,
+    val spentAmount: Double,
+    val remainingAmount: Double,
+    val percentageUsed: Double,
+    val status: String
+)
+
+data class BudgetTracking(
+    val budget: Budget
+)
+
+data class SavingGoalRequest(
+    val title: String,
+    val targetAmount: Double,
+    val currentAmount: Double
+)
+
+data class SavingGoal(
+    val id: Long,
+    val scope: String,
+    val title: String,
+    val targetAmount: Double,
+    val currentAmount: Double,
+    val remainingAmount: Double,
+    val percentageUsed: Double,
+    val status: String
+)
