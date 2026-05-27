@@ -19,10 +19,15 @@ public final class GroupTransactionsDtos {
                                           LocalDate transactionDate) {
     }
 
+    public record VerificationRequest(@NotBlank String decision) {
+    }
+
     public record GroupTransactionDto(Long id, Long groupId, Long actorUserId, String actorUsername,
                                       String type, BigDecimal amount, String category, String description,
                                       LocalDate transactionDate, LocalDateTime createdAt,
-                                      LocalDateTime updatedAt) {
+                                      LocalDateTime updatedAt, Long createdByUserId, String verificationStatus,
+                                      Long verifiedByUserId, LocalDateTime verifiedAt,
+                                      LocalDateTime declinedAt) {
     }
 
     public record GroupSummaryDto(BigDecimal totalIncome, BigDecimal totalExpenses, BigDecimal netBalance) {

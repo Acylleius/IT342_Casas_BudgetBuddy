@@ -139,10 +139,13 @@ public class DatabasePersistenceService {
 
     public void saveInbox(InboxNotificationRecord notification) {
         execute("save inbox notification", """
-                insert into inbox_notifications (id, recipient_user_id, group_id, invitation_id, type, title, message, is_read, created_at)
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                on conflict (id) do update set is_read = excluded.is_read
+                insert into inbox_notifications (id, recipient_user_id, group_id, invitation_id, entity_type,
+                  entity_id, action_status, type, title, message, is_read, created_at)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                on conflict (id) do update set is_read = excluded.is_read,
+                  action_status = excluded.action_status
                 """, notification.id(), notification.recipientUserId(), notification.groupId(), notification.invitationId(),
+                notification.entityType(), notification.entityId(), notification.actionStatus(),
                 notification.type(), notification.title(), notification.message(), notification.read(),
                 Timestamp.valueOf(notification.createdAt()));
     }
@@ -160,14 +163,21 @@ public class DatabasePersistenceService {
 
     public void saveGroupTransaction(GroupTransactionRecord transaction) {
         execute("save group transaction", """
-                insert into group_transactions (id, group_id, created_by_user_id, type, amount, category,
+                insert into group_transactions (id, group_id, created_by_user_id, selected_user_id,
+                  verification_status, verified_by_user_id, verified_at, declined_at, type, amount, category,
                   description, transaction_date, created_at, updated_at)
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 on conflict (id) do update set type = excluded.type, amount = excluded.amount,
                   category = excluded.category, description = excluded.description,
-                  transaction_date = excluded.transaction_date, updated_at = excluded.updated_at
-                """, transaction.id(), transaction.groupId(), transaction.createdByUserId(), transaction.type(),
-                transaction.amount(), transaction.category(), transaction.description(),
+                  transaction_date = excluded.transaction_date, updated_at = excluded.updated_at,
+                  selected_user_id = excluded.selected_user_id, verification_status = excluded.verification_status,
+                  verified_by_user_id = excluded.verified_by_user_id, verified_at = excluded.verified_at,
+                  declined_at = excluded.declined_at
+                """, transaction.id(), transaction.groupId(), transaction.createdByUserId(), transaction.selectedUserId(),
+                transaction.verificationStatus(), transaction.verifiedByUserId(),
+                transaction.verifiedAt() == null ? null : Timestamp.valueOf(transaction.verifiedAt()),
+                transaction.declinedAt() == null ? null : Timestamp.valueOf(transaction.declinedAt()),
+                transaction.type(), transaction.amount(), transaction.category(), transaction.description(),
                 Date.valueOf(transaction.transactionDate()), Timestamp.valueOf(transaction.createdAt()),
                 Timestamp.valueOf(transaction.updatedAt()));
     }
@@ -311,6 +321,11 @@ public class DatabasePersistenceService {
                   id bigserial primary key,
                   group_id bigint not null references groups(id) on delete cascade,
                   created_by_user_id bigint not null references users(id),
+                  selected_user_id bigint references users(id),
+                  verification_status text not null default 'APPROVED',
+                  verified_by_user_id bigint references users(id),
+                  verified_at timestamptz,
+                  declined_at timestamptz,
                   type text not null,
                   amount numeric(12,2) not null,
                   category text not null,
@@ -320,6 +335,11 @@ public class DatabasePersistenceService {
                   updated_at timestamptz
                 )
                 """,
+                "alter table group_transactions add column if not exists selected_user_id bigint references users(id)",
+                "alter table group_transactions add column if not exists verification_status text not null default 'APPROVED'",
+                "alter table group_transactions add column if not exists verified_by_user_id bigint references users(id)",
+                "alter table group_transactions add column if not exists verified_at timestamptz",
+                "alter table group_transactions add column if not exists declined_at timestamptz",
                 """
                 create table if not exists expense_splits (
                   id bigserial primary key,
@@ -351,6 +371,9 @@ public class DatabasePersistenceService {
                   recipient_user_id bigint not null references users(id) on delete cascade,
                   group_id bigint references groups(id) on delete cascade,
                   invitation_id bigint references group_invitations(id) on delete cascade,
+                  entity_type text,
+                  entity_id bigint,
+                  action_status text,
                   type text not null,
                   title text not null,
                   message text not null,
@@ -358,6 +381,9 @@ public class DatabasePersistenceService {
                   created_at timestamptz not null default now()
                 )
                 """,
+                "alter table inbox_notifications add column if not exists entity_type text",
+                "alter table inbox_notifications add column if not exists entity_id bigint",
+                "alter table inbox_notifications add column if not exists action_status text",
                 """
                 create table if not exists budgets (
                   id bigserial primary key,
@@ -511,11 +537,13 @@ public class DatabasePersistenceService {
 
     private void loadInbox() {
         List<InboxNotificationRecord> records = jdbcTemplate.query("""
-                select id, recipient_user_id, group_id, invitation_id, type, title, message, is_read, created_at
+                select id, recipient_user_id, group_id, invitation_id, entity_type, entity_id,
+                  action_status, type, title, message, is_read, created_at
                 from inbox_notifications
                 order by id
                 """, (rs, rowNum) -> new InboxNotificationRecord(rs.getLong("id"), rs.getLong("recipient_user_id"),
-                nullableLong(rs, "group_id"), nullableLong(rs, "invitation_id"), rs.getString("type"),
+                nullableLong(rs, "group_id"), nullableLong(rs, "invitation_id"), rs.getString("entity_type"),
+                nullableLong(rs, "entity_id"), rs.getString("action_status"), rs.getString("type"),
                 rs.getString("title"), rs.getString("message"), rs.getBoolean("is_read"),
                 rs.getTimestamp("created_at").toLocalDateTime()));
         if (!records.isEmpty() && store.inboxNotifications.isEmpty()) {
@@ -526,7 +554,8 @@ public class DatabasePersistenceService {
 
     private void loadGroupTransactions() {
         List<GroupTransactionRecord> records = jdbcTemplate.query("""
-                select id, group_id, created_by_user_id, type, amount, category, description,
+                select id, group_id, created_by_user_id, selected_user_id, verification_status,
+                  verified_by_user_id, verified_at, declined_at, type, amount, category, description,
                   transaction_date, created_at, updated_at
                 from group_transactions
                 order by id
@@ -536,7 +565,11 @@ public class DatabasePersistenceService {
                 rs.getTimestamp("created_at").toLocalDateTime(),
                 rs.getTimestamp("updated_at") == null ? rs.getTimestamp("created_at").toLocalDateTime()
                         : rs.getTimestamp("updated_at").toLocalDateTime(),
-                null, false));
+                null, false, nullableLong(rs, "selected_user_id") == null ? rs.getLong("created_by_user_id") : nullableLong(rs, "selected_user_id"),
+                rs.getString("verification_status") == null ? "APPROVED" : rs.getString("verification_status"),
+                nullableLong(rs, "verified_by_user_id"),
+                rs.getTimestamp("verified_at") == null ? null : rs.getTimestamp("verified_at").toLocalDateTime(),
+                rs.getTimestamp("declined_at") == null ? null : rs.getTimestamp("declined_at").toLocalDateTime()));
         if (!records.isEmpty() && store.groupTransactions.isEmpty()) {
             store.groupTransactions.addAll(records);
             store.groupTransactionIds.set(records.stream().mapToLong(GroupTransactionRecord::id).max().orElse(0L) + 1);

@@ -5,6 +5,9 @@ data class InboxNotification(
     val groupId: Long?,
     val invitationId: Long?,
     val invitationStatus: String?,
+    val entityType: String?,
+    val entityId: Long?,
+    val actionStatus: String?,
     val type: String,
     val title: String,
     val message: String,
@@ -33,7 +36,8 @@ data class GroupTransaction(
     val type: String,
     val amount: Double,
     val category: String,
-    val description: String?
+    val description: String?,
+    val verificationStatus: String?
 )
 
 data class GroupHistoryItem(

@@ -14,6 +14,7 @@ import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore.BudgetRecord;
 import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore.GroupTransactionRecord;
 import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore.SharedExpenseRecord;
 import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore.TransactionRecord;
+import edu.casas.budgetbuddy.shared.utils.CategoryUtils;
 import edu.casas.budgetbuddy.shared.utils.DomainException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -47,7 +48,7 @@ public class BudgetsService {
 
     public synchronized BudgetDto createPersonal(Long userId, BudgetRequest request) {
         BudgetRecord record = new BudgetRecord(store.budgetIds.getAndIncrement(), "PERSONAL", userId, null, userId,
-                request.name(), request.limitAmount(), normalizePeriod(request.period()), normalizeCategory(request.category()),
+                request.name(), request.limitAmount(), normalizePeriod(request.period()), CategoryUtils.optional(request.category()),
                 request.startDate(), request.endDate(), false, LocalDateTime.now(), LocalDateTime.now());
         store.budgets.add(record);
         databasePersistenceService.saveBudget(record);
@@ -98,7 +99,7 @@ public class BudgetsService {
     public synchronized BudgetDto createGroup(Long userId, Long groupId, BudgetRequest request) {
         groupsService.requireMember(groupId, userId);
         BudgetRecord record = new BudgetRecord(store.budgetIds.getAndIncrement(), "GROUP", null, groupId, userId,
-                request.name(), request.limitAmount(), normalizePeriod(request.period()), normalizeCategory(request.category()),
+                request.name(), request.limitAmount(), normalizePeriod(request.period()), CategoryUtils.optional(request.category()),
                 request.startDate(), request.endDate(), false, LocalDateTime.now(), LocalDateTime.now());
         store.budgets.add(record);
         databasePersistenceService.saveBudget(record);
@@ -249,6 +250,7 @@ public class BudgetsService {
                 .toList();
         List<RelatedTransactionDto> groupTransactions = store.groupTransactions.stream()
                 .filter(transaction -> transaction.groupId().equals(budget.groupId()) && !transaction.deleted())
+                .filter(transaction -> "APPROVED".equals(transaction.verificationStatus()))
                 .filter(transaction -> "EXPENSE".equals(transaction.type()))
                 .filter(transaction -> within(transaction.transactionDate(), window))
                 .filter(transaction -> categoryMatches(budget.category(), transaction.category()))
@@ -289,7 +291,7 @@ public class BudgetsService {
     private BudgetRecord replaceBudget(BudgetRecord current, BudgetRequest request) {
         BudgetRecord replacement = new BudgetRecord(current.id(), current.scope(), current.userId(), current.groupId(),
                 current.createdByUserId(), request.name(), request.limitAmount(), normalizePeriod(request.period()),
-                normalizeCategory(request.category()), request.startDate(), request.endDate(), false,
+                CategoryUtils.optional(request.category()), request.startDate(), request.endDate(), false,
                 current.createdAt(), LocalDateTime.now());
         replace(replacement);
         databasePersistenceService.saveBudget(replacement);
@@ -321,12 +323,8 @@ public class BudgetsService {
         return normalized;
     }
 
-    private String normalizeCategory(String category) {
-        return category == null || category.isBlank() ? null : category.trim();
-    }
-
     private boolean categoryMatches(String budgetCategory, String transactionCategory) {
-        return budgetCategory == null || budgetCategory.equalsIgnoreCase(transactionCategory == null ? "" : transactionCategory);
+        return CategoryUtils.matches(budgetCategory, transactionCategory);
     }
 
     private boolean within(LocalDate date, PeriodWindow window) {

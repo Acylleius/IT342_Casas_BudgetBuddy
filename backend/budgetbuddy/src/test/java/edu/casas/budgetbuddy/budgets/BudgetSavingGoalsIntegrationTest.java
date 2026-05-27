@@ -79,6 +79,39 @@ class BudgetSavingGoalsIntegrationTest extends TestSupport {
     }
 
     @Test
+    void invalidCategoryRejected() throws Exception {
+        Session user = register("invalid-category@mail.com");
+        mockMvc.perform(post("/api/v1/transactions")
+                        .header("Authorization", bearer(user))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"type\":\"EXPENSE\",\"amount\":100,\"category\":\"RANDOM_BAD_CATEGORY\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Invalid category")));
+    }
+
+    @Test
+    void generalBudgetTracksAllExpenseCategories() throws Exception {
+        Session user = register("general-budget@mail.com");
+        createPersonalBudget(user, 1000, "MONTHLY", "GENERAL");
+        createPersonalExpense(user, 100, "GROCERIES");
+        createPersonalExpense(user, 200, "TRANSPORTATION");
+        mockMvc.perform(get("/api/v1/budgets/tracking").header("Authorization", bearer(user)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].budget.spentAmount").value(300));
+    }
+
+    @Test
+    void categorySpecificBudgetOnlyTracksMatchingExpenses() throws Exception {
+        Session user = register("specific-budget@mail.com");
+        createPersonalBudget(user, 1000, "MONTHLY", "GROCERIES");
+        createPersonalExpense(user, 100, "GROCERIES");
+        createPersonalExpense(user, 200, "TRANSPORTATION");
+        mockMvc.perform(get("/api/v1/budgets/tracking").header("Authorization", bearer(user)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].budget.spentAmount").value(100));
+    }
+
+    @Test
     void groupBudgetTracksGroupExpensesOnly() throws Exception {
         Session owner = register("group-track@mail.com");
         Long groupId = createGroup(owner);
@@ -166,6 +199,89 @@ class BudgetSavingGoalsIntegrationTest extends TestSupport {
                 .andExpect(jsonPath("$.data[?(@.type=='GROUP_SAVING_GOAL_COMPLETED')].type").isNotEmpty());
     }
 
+    @Test
+    void groupTransactionBySelfIsApprovedImmediately() throws Exception {
+        Session owner = register("verify-self@mail.com");
+        Long groupId = createGroup(owner);
+        MvcResult result = createGroupTransactionResult(owner, groupId, "EXPENSE", 100, "GROCERIES", owner.userId());
+        JsonNode data = root(result).at("/data");
+        org.junit.jupiter.api.Assertions.assertEquals("APPROVED", data.at("/verificationStatus").asText());
+        mockMvc.perform(get("/api/v1/groups/%d/transactions/summary".formatted(groupId))
+                        .header("Authorization", bearer(owner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalExpenses").value(100));
+    }
+
+    @Test
+    void groupTransactionUsingAnotherMemberRequiresVerification() throws Exception {
+        Session owner = register("verify-owner@mail.com");
+        Session member = register("verify-member@mail.com");
+        Long groupId = createGroup(owner);
+        addMember(owner, groupId, member.email());
+        createGroupBudget(owner, groupId, 1000, "MONTHLY", "GROCERIES");
+        MvcResult result = createGroupTransactionResult(owner, groupId, "EXPENSE", 500, "GROCERIES", member.userId());
+        Long transactionId = root(result).at("/data/id").asLong();
+        mockMvc.perform(get("/api/v1/groups/%d/transactions/summary".formatted(groupId))
+                        .header("Authorization", bearer(owner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalExpenses").value(0));
+        mockMvc.perform(get("/api/v1/inbox").header("Authorization", bearer(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[?(@.type=='TRANSACTION_VERIFICATION')].entityId")
+                        .value(org.hamcrest.Matchers.contains(transactionId.intValue())));
+    }
+
+    @Test
+    void onlySelectedUserCanAcceptVerificationAndApprovedCountsInBudget() throws Exception {
+        Session owner = register("verify-accept-owner@mail.com");
+        Session member = register("verify-accept-member@mail.com");
+        Long groupId = createGroup(owner);
+        addMember(owner, groupId, member.email());
+        createGroupBudget(owner, groupId, 1000, "MONTHLY", "GROCERIES");
+        Long transactionId = root(createGroupTransactionResult(owner, groupId, "EXPENSE", 500, "GROCERIES", member.userId()))
+                .at("/data/id").asLong();
+        mockMvc.perform(post("/api/v1/groups/%d/transactions/%d/verify".formatted(groupId, transactionId))
+                        .header("Authorization", bearer(owner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"decision\":\"ACCEPT\"}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/groups/%d/transactions/%d/verify".formatted(groupId, transactionId))
+                        .header("Authorization", bearer(member))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"decision\":\"ACCEPT\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.verificationStatus").value("APPROVED"));
+        mockMvc.perform(get("/api/v1/groups/%d/budgets/tracking".formatted(groupId))
+                        .header("Authorization", bearer(owner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].budget.spentAmount").value(500));
+        mockMvc.perform(get("/api/v1/inbox").header("Authorization", bearer(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[?(@.entityId==%d)].isRead".formatted(transactionId))
+                        .value(org.hamcrest.Matchers.contains(true)));
+    }
+
+    @Test
+    void selectedUserCanDeclineVerificationAndDeclinedDoesNotCount() throws Exception {
+        Session owner = register("verify-decline-owner@mail.com");
+        Session member = register("verify-decline-member@mail.com");
+        Long groupId = createGroup(owner);
+        addMember(owner, groupId, member.email());
+        createGroupBudget(owner, groupId, 1000, "MONTHLY", "GROCERIES");
+        Long transactionId = root(createGroupTransactionResult(owner, groupId, "EXPENSE", 500, "GROCERIES", member.userId()))
+                .at("/data/id").asLong();
+        mockMvc.perform(post("/api/v1/groups/%d/transactions/%d/verify".formatted(groupId, transactionId))
+                        .header("Authorization", bearer(member))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"decision\":\"DECLINE\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.verificationStatus").value("DECLINED"));
+        mockMvc.perform(get("/api/v1/groups/%d/budgets/tracking".formatted(groupId))
+                        .header("Authorization", bearer(owner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].budget.spentAmount").value(0));
+    }
+
     private Long createPersonalBudget(Session user, int amount, String period, String category) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/v1/budgets")
                         .header("Authorization", bearer(user))
@@ -233,11 +349,17 @@ class BudgetSavingGoalsIntegrationTest extends TestSupport {
     }
 
     private void createGroupTransaction(Session user, Long groupId, String type, int amount, String category) throws Exception {
-        mockMvc.perform(post("/api/v1/groups/%d/transactions".formatted(groupId))
+        createGroupTransactionResult(user, groupId, type, amount, category, user.userId());
+    }
+
+    private MvcResult createGroupTransactionResult(Session user, Long groupId, String type, int amount,
+                                                  String category, Long actorUserId) throws Exception {
+        return mockMvc.perform(post("/api/v1/groups/%d/transactions".formatted(groupId))
                 .header("Authorization", bearer(user))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"type\":\"%s\",\"amount\":%d,\"category\":\"%s\",\"actorUserId\":%d}"
-                        .formatted(type, amount, category, user.userId())));
+                        .formatted(type, amount, category, actorUserId)))
+                .andReturn();
     }
 
     private String budgetJson(String name, int amount, String period, String category) {

@@ -62,7 +62,7 @@ class TransactionsIntegrationTest extends TestSupport {
         createTransaction(session, "INCOME", 100);
         mockMvc.perform(get("/api/v1/transactions").header("Authorization", bearer(session)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].category").value("Salary"));
+                .andExpect(jsonPath("$.data[0].category").value("SALARY"));
     }
 
     @Test

@@ -1,5 +1,8 @@
 import { api, formatPeso, subscribeRealtime } from '../../shared/js/api.js';
 import { showToast } from '../../shared/js/toast.js';
+import { categoryLabel, populateCategorySelect } from '../../shared/js/categories.js';
+
+populateCategorySelect(document.getElementById('category'));
 
 async function loadBudgets() {
   const tracking = await api('/budgets/tracking');
@@ -18,7 +21,7 @@ async function loadBudgets() {
             <span class="amount-pill expense">${formatPeso(budget.spentAmount)} spent</span>
             <span>${formatPeso(budget.limitAmount)} limit</span>
             <span>${formatPeso(budget.remainingAmount)} remaining</span>
-            <span>${budget.period}${budget.category ? ` / ${budget.category}` : ''}</span>
+            <span>${budget.period} / ${categoryLabel(budget.category)}</span>
           </div>
           <small>${item.relatedTransactions.length} related expense transaction(s)</small>
         </div>
@@ -33,7 +36,7 @@ document.getElementById('budgetForm').addEventListener('submit', async event => 
     name: document.getElementById('budgetName').value,
     limitAmount: document.getElementById('limitAmount').value,
     period: document.getElementById('period').value,
-    category: document.getElementById('category').value || null,
+    category: document.getElementById('category').value,
     startDate: document.getElementById('startDate').value || null,
     endDate: document.getElementById('endDate').value || null
   };

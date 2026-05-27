@@ -1,14 +1,16 @@
 import { api, formatPeso, subscribeRealtime } from '../../shared/js/api.js';
 import { showToast } from '../../shared/js/toast.js';
+import { categoryLabel, populateCategorySelect } from '../../shared/js/categories.js';
 
 const groupId = new URLSearchParams(window.location.search).get('id');
+populateCategorySelect(document.getElementById('transactionCategory'));
+populateCategorySelect(document.getElementById('budgetCategory'));
 
 async function loadGroup() {
-  const [group, transactions, summary, balances, history, budgetTracking, savingGoals] = await Promise.all([
+  const [group, transactions, summary, history, budgetTracking, savingGoals] = await Promise.all([
     api(`/groups/${groupId}`),
     api(`/groups/${groupId}/transactions`),
     api(`/groups/${groupId}/transactions/summary`),
-    api(`/groups/${groupId}/balances`),
     api(`/groups/${groupId}/history`),
     api(`/groups/${groupId}/budgets/tracking`),
     api(`/groups/${groupId}/saving-goals`)
@@ -32,19 +34,14 @@ async function loadGroup() {
 
   document.getElementById('groupTransactions').innerHTML = transactions.length ? transactions.map(transaction => `
     <div class="list-row">
-      <div><strong>${transaction.actorUsername}</strong><br><span>${transaction.type}: ${transaction.category}</span></div>
-      <span class="amount amount-pill ${transaction.type === 'INCOME' ? 'income' : 'expense'}">
-        ${transaction.type === 'INCOME' ? '+' : '-'} ${formatPeso(transaction.amount)}
-      </span>
+      <div>
+        <strong>${transaction.actorUsername}</strong>
+        <span class="badge ${transaction.verificationStatus === 'APPROVED' ? 'badge-income' : transaction.verificationStatus === 'DECLINED' ? 'badge-expense' : 'badge-pending'}">${transaction.verificationStatus}</span>
+        <br><span>${transaction.type}: ${categoryLabel(transaction.category)}</span>
+      </div>
+      <span class="amount amount-pill ${transaction.type === 'INCOME' ? 'income' : 'expense'}">${transaction.type === 'INCOME' ? '+' : '-'} ${formatPeso(transaction.amount)}</span>
     </div>
   `).join('') : '<div class="empty-state">No group transactions yet.</div>';
-
-  document.getElementById('balances').innerHTML = balances.length ? balances.map(balance => `
-    <div class="list-row">
-      <span>Member #${balance.userId}</span>
-      <span class="amount amount-pill ${Number(balance.netBalance) >= 0 ? 'income' : 'expense'}">${formatPeso(balance.netBalance)}</span>
-    </div>
-  `).join('') : '<div class="empty-state">No balances yet.</div>';
 
   document.getElementById('groupBudgets').innerHTML = budgetTracking.length ? budgetTracking.map(item => {
     const budget = item.budget;
@@ -58,7 +55,7 @@ async function loadGroup() {
           <div class="tracking-meta">
             <span>${formatPeso(budget.spentAmount)} spent</span>
             <span>${formatPeso(budget.limitAmount)} limit</span>
-            <span>${budget.period}${budget.category ? ` / ${budget.category}` : ''}</span>
+            <span>${budget.period} / ${categoryLabel(budget.category)}</span>
           </div>
         </div>
       </div>
@@ -127,7 +124,7 @@ document.getElementById('budgetForm').addEventListener('submit', async event => 
       name: document.getElementById('budgetName').value,
       limitAmount: document.getElementById('budgetLimit').value,
       period: document.getElementById('budgetPeriod').value,
-      category: document.getElementById('budgetCategory').value || null
+      category: document.getElementById('budgetCategory').value
     })
   });
   event.target.reset();

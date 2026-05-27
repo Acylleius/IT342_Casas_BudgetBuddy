@@ -123,6 +123,7 @@ public class BudgetBuddyStore {
     }
 
     public record InboxNotificationRecord(Long id, Long recipientUserId, Long groupId, Long invitationId,
+                                          String entityType, Long entityId, String actionStatus,
                                           String type, String title, String message, boolean read,
                                           LocalDateTime createdAt) {
     }
@@ -130,7 +131,10 @@ public class BudgetBuddyStore {
     public record GroupTransactionRecord(Long id, Long groupId, Long createdByUserId, String type,
                                          BigDecimal amount, String category, String description,
                                          LocalDate transactionDate, LocalDateTime createdAt,
-                                         LocalDateTime updatedAt, Long sharedExpenseId, boolean deleted) {
+                                         LocalDateTime updatedAt, Long sharedExpenseId, boolean deleted,
+                                         Long selectedUserId, String verificationStatus,
+                                         Long verifiedByUserId, LocalDateTime verifiedAt,
+                                         LocalDateTime declinedAt) {
     }
 
     public record BudgetRecord(Long id, String scope, Long userId, Long groupId, Long createdByUserId,

@@ -9,6 +9,7 @@ import com.budgetbuddy.mobile.model.ApiResponse
 import com.budgetbuddy.mobile.model.Budget
 import com.budgetbuddy.mobile.model.BudgetRequest
 import com.budgetbuddy.mobile.model.BudgetTracking
+import com.budgetbuddy.mobile.util.Categories
 import com.budgetbuddy.mobile.util.SessionManager
 import retrofit2.Call
 import retrofit2.Callback
@@ -21,6 +22,8 @@ class BudgetsActivity : AppCompatActivity() {
 
         val spinner = findViewById<Spinner>(R.id.budgetPeriodSpinner)
         spinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, listOf("WEEKLY", "MONTHLY"))
+        findViewById<Spinner>(R.id.budgetCategorySpinner).adapter =
+            ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, Categories.values)
 
         findViewById<Button>(R.id.saveBudgetButton).setOnClickListener { createBudget() }
         loadBudgets()
@@ -36,7 +39,7 @@ class BudgetsActivity : AppCompatActivity() {
             return
         }
         val period = findViewById<Spinner>(R.id.budgetPeriodSpinner).selectedItem.toString()
-        val category = findViewById<EditText>(R.id.budgetCategoryField).text.toString().ifBlank { null }
+        val category = findViewById<Spinner>(R.id.budgetCategorySpinner).selectedItem.toString()
         RetrofitClient.instance.createBudget("Bearer $token", BudgetRequest(name, amount, period, category))
             .enqueue(object : Callback<ApiResponse<Budget>> {
                 override fun onResponse(call: Call<ApiResponse<Budget>>, response: Response<ApiResponse<Budget>>) {
@@ -68,7 +71,7 @@ class BudgetsActivity : AppCompatActivity() {
                 } else {
                     items.joinToString("\n\n") {
                         val budget = it.budget
-                        "${budget.name} (${budget.period})\n${budget.status} - ${budget.percentageUsed}% used\nSpent PHP ${budget.spentAmount} of PHP ${budget.limitAmount}\nRemaining PHP ${budget.remainingAmount}"
+                        "${budget.name} (${budget.period}, ${Categories.label(budget.category)})\n${budget.status} - ${budget.percentageUsed}% used\nSpent PHP ${budget.spentAmount} of PHP ${budget.limitAmount}\nRemaining PHP ${budget.remainingAmount}"
                     }
                 }
             }

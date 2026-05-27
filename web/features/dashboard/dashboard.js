@@ -1,5 +1,8 @@
 import { api, formatPeso, logout, subscribeRealtime } from '../../shared/js/api.js';
 import { showToast } from '../../shared/js/toast.js';
+import { categoryLabel, populateCategorySelect } from '../../shared/js/categories.js';
+
+populateCategorySelect(document.getElementById('category'));
 
 async function loadDashboard() {
   const [summary, transactions, activity] = await Promise.all([
@@ -15,7 +18,7 @@ async function loadDashboard() {
 
   document.getElementById('transactions').innerHTML = transactions.length ? transactions.map(transaction => `
     <div class="list-row">
-      <div><strong>${transaction.category}</strong><br><span>${transaction.type}</span></div>
+      <div><strong>${categoryLabel(transaction.category)}</strong><br><span>${transaction.type}</span></div>
       <span class="amount-pill ${transaction.type === 'INCOME' ? 'income' : 'expense'} amount">
         ${transaction.type === 'INCOME' ? '+' : '-'} ${formatPeso(transaction.amount)}
       </span>

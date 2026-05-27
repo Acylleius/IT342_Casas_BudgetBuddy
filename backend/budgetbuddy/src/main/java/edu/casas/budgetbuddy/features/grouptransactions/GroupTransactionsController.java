@@ -2,6 +2,7 @@ package edu.casas.budgetbuddy.features.grouptransactions;
 
 import edu.casas.budgetbuddy.features.auth.AuthService;
 import edu.casas.budgetbuddy.features.grouptransactions.GroupTransactionsDtos.GroupTransactionRequest;
+import edu.casas.budgetbuddy.features.grouptransactions.GroupTransactionsDtos.VerificationRequest;
 import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore.UserRecord;
 import edu.casas.budgetbuddy.shared.utils.ApiResponse;
 import jakarta.validation.Valid;
@@ -60,7 +61,7 @@ public class GroupTransactionsController {
         UserRecord user = authService.requireUser(authorization);
         return ApiResponse.success(groupTransactionsService.update(user.id(), groupId, transactionId,
                 request.type(), request.amount(), request.category(), request.description(),
-                request.transactionDate()), "Group transaction updated");
+                request.actorUserId(), request.transactionDate()), "Group transaction updated");
     }
 
     @DeleteMapping("/api/v1/groups/{groupId}/transactions/{transactionId}")
@@ -70,5 +71,16 @@ public class GroupTransactionsController {
         UserRecord user = authService.requireUser(authorization);
         groupTransactionsService.delete(user.id(), groupId, transactionId);
         return ApiResponse.success(null, "Group transaction deleted");
+    }
+
+    @PostMapping("/api/v1/groups/{groupId}/transactions/{transactionId}/verify")
+    public ApiResponse<GroupTransactionsDtos.GroupTransactionDto> verify(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @PathVariable Long groupId,
+            @PathVariable Long transactionId,
+            @Valid @RequestBody VerificationRequest request) {
+        UserRecord user = authService.requireUser(authorization);
+        return ApiResponse.success(groupTransactionsService.verify(user.id(), groupId, transactionId, request.decision()),
+                "Transaction verification updated");
     }
 }

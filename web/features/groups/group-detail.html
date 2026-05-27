@@ -31,7 +31,7 @@
         <div class="card-body grid">
           <div class="span-4"><strong>Total Income</strong><p id="groupIncome" class="amount amount-pill income">PHP 0.00</p></div>
           <div class="span-4"><strong>Total Expenses</strong><p id="groupExpense" class="amount amount-pill expense">PHP 0.00</p></div>
-          <div class="span-4"><strong>Net Balance</strong><p id="groupNet" class="amount amount-pill income">PHP 0.00</p></div>
+          <div class="span-4"><strong>Available Funds</strong><p id="groupNet" class="amount amount-pill income">PHP 0.00</p></div>
         </div>
       </article>
       <article class="card span-4">
@@ -41,8 +41,9 @@
             <div class="field"><label for="transactionType">Type</label><select id="transactionType"><option value="EXPENSE">Expense</option><option value="INCOME">Income</option></select></div>
             <div class="field"><label for="actorUserId">Payer / Contributor</label><select id="actorUserId" required></select></div>
             <div class="field"><label for="transactionAmount">Amount</label><input id="transactionAmount" type="number" min="0.01" step="0.01" required></div>
-            <div class="field"><label for="transactionCategory">Category</label><input id="transactionCategory" required></div>
+            <div class="field"><label for="transactionCategory">Category</label><select id="transactionCategory" required></select></div>
             <div class="field"><label for="transactionDescription">Description</label><textarea id="transactionDescription"></textarea></div>
+            <p id="verificationHint">Choosing another member will send them a verification request before this counts in totals.</p>
             <button class="btn-primary" type="submit">Save</button>
           </form>
         </div>
@@ -65,17 +66,13 @@
         <div id="groupTransactions" class="card-body"><div class="empty-state">No group transactions yet.</div></div>
       </article>
       <article class="card span-6">
-        <div class="card-header"><h3>Member Balances</h3></div>
-        <div id="balances" class="card-body"><div class="empty-state">No balances yet.</div></div>
-      </article>
-      <article class="card span-6">
         <div class="card-header"><h3>Budget Tracking</h3></div>
         <div class="card-body">
           <form id="budgetForm">
             <div class="field"><label for="budgetName">Budget name</label><input id="budgetName" required></div>
             <div class="field"><label for="budgetLimit">Limit</label><input id="budgetLimit" type="number" min="0.01" step="0.01" required></div>
             <div class="field"><label for="budgetPeriod">Period</label><select id="budgetPeriod"><option value="WEEKLY">Weekly</option><option value="MONTHLY">Monthly</option></select></div>
-            <div class="field"><label for="budgetCategory">Category optional</label><input id="budgetCategory"></div>
+            <div class="field"><label for="budgetCategory">Category</label><select id="budgetCategory"></select></div>
             <button class="btn-secondary" type="submit">Create Budget</button>
           </form>
           <div id="groupBudgets"></div>

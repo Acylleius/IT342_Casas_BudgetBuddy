@@ -24,6 +24,14 @@ interface ApiService {
     @POST("invitations/{invitationId}/decline")
     fun declineInvitation(@Header("Authorization") authorization: String, @Path("invitationId") invitationId: Long): Call<ApiResponse<Invitation>>
 
+    @POST("groups/{groupId}/transactions/{transactionId}/verify")
+    fun verifyGroupTransaction(
+        @Header("Authorization") authorization: String,
+        @Path("groupId") groupId: Long,
+        @Path("transactionId") transactionId: Long,
+        @Body request: Map<String, String>
+    ): Call<ApiResponse<GroupTransaction>>
+
     @GET("groups")
     fun groups(@Header("Authorization") authorization: String): Call<ApiResponse<List<Group>>>
 

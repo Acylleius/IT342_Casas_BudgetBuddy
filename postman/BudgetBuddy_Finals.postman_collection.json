@@ -25,6 +25,7 @@
     { "key": "savingGoalId", "value": "1" },
     { "key": "transactionId", "value": "1" },
     { "key": "groupTransactionId", "value": "1" },
+    { "key": "selectedUserId", "value": "2" },
     { "key": "invitationId", "value": "1" },
     { "key": "inboxId", "value": "1" }
   ],
@@ -43,8 +44,8 @@
       "name": "TRANSACTIONS",
       "item": [
         { "name": "GET /transactions", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/transactions" } },
-        { "name": "POST /transactions", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/transactions", "body": { "mode": "raw", "raw": "{\"type\":\"EXPENSE\",\"amount\":500,\"category\":\"Groceries\"}" } } },
-        { "name": "PUT /transactions/{id}", "request": { "method": "PUT", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/transactions/{{transactionId}}", "body": { "mode": "raw", "raw": "{\"type\":\"EXPENSE\",\"amount\":650,\"category\":\"Groceries\"}" } } },
+        { "name": "POST /transactions - personal expense with category", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/transactions", "body": { "mode": "raw", "raw": "{\"type\":\"EXPENSE\",\"amount\":500,\"category\":\"GROCERIES\"}" } } },
+        { "name": "PUT /transactions/{id}", "request": { "method": "PUT", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/transactions/{{transactionId}}", "body": { "mode": "raw", "raw": "{\"type\":\"EXPENSE\",\"amount\":650,\"category\":\"GROCERIES\"}" } } },
         { "name": "DELETE /transactions/{id}", "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/transactions/{{transactionId}}" } }
       ]
     },
@@ -69,30 +70,34 @@
     {
       "name": "GROUP TRANSACTIONS",
       "item": [
-        { "name": "POST /groups/{groupId}/transactions", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/groups/{{groupId}}/transactions", "body": { "mode": "raw", "raw": "{\"type\":\"EXPENSE\",\"amount\":6000,\"category\":\"Rent\",\"actorUserId\":1}" } } },
+        { "name": "POST /groups/{groupId}/transactions - self approved", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/groups/{{groupId}}/transactions", "body": { "mode": "raw", "raw": "{\"type\":\"EXPENSE\",\"amount\":6000,\"category\":\"RENT\",\"actorUserId\":1}" } } },
+        { "name": "POST /groups/{groupId}/transactions - another member pending verification", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/groups/{{groupId}}/transactions", "body": { "mode": "raw", "raw": "{\"type\":\"EXPENSE\",\"amount\":500,\"category\":\"GROCERIES\",\"description\":\"Shared groceries\",\"actorUserId\":{{selectedUserId}}}" } } },
         { "name": "GET /groups/{groupId}/transactions", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/groups/{{groupId}}/transactions" } },
-        { "name": "PUT /groups/{groupId}/transactions/{transactionId}", "request": { "method": "PUT", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/groups/{{groupId}}/transactions/{{groupTransactionId}}", "body": { "mode": "raw", "raw": "{\"type\":\"EXPENSE\",\"amount\":6500,\"category\":\"Rent\",\"actorUserId\":1}" } } },
+        { "name": "PUT /groups/{groupId}/transactions/{transactionId}", "request": { "method": "PUT", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/groups/{{groupId}}/transactions/{{groupTransactionId}}", "body": { "mode": "raw", "raw": "{\"type\":\"EXPENSE\",\"amount\":6500,\"category\":\"RENT\",\"actorUserId\":1}" } } },
+        { "name": "POST /groups/{groupId}/transactions/{transactionId}/verify - accept", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/groups/{{groupId}}/transactions/{{groupTransactionId}}/verify", "body": { "mode": "raw", "raw": "{\"decision\":\"ACCEPT\"}" } } },
+        { "name": "POST /groups/{groupId}/transactions/{transactionId}/verify - decline", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/groups/{{groupId}}/transactions/{{groupTransactionId}}/verify", "body": { "mode": "raw", "raw": "{\"decision\":\"DECLINE\"}" } } },
         { "name": "DELETE /groups/{groupId}/transactions/{transactionId}", "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/groups/{{groupId}}/transactions/{{groupTransactionId}}" } },
-        { "name": "GET /groups/{groupId}/balances", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/groups/{{groupId}}/balances" } }
+        { "name": "GET /groups/{groupId}/budgets/tracking - approved transactions only", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/groups/{{groupId}}/budgets/tracking" } }
       ]
     },
     {
       "name": "PERSONAL BUDGETS",
       "item": [
-        { "name": "POST /budgets", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/budgets", "body": { "mode": "raw", "raw": "{\"name\":\"Monthly Food Budget\",\"limitAmount\":5000,\"period\":\"MONTHLY\",\"category\":\"Food\"}" } } },
+        { "name": "POST /budgets - category budget", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/budgets", "body": { "mode": "raw", "raw": "{\"name\":\"Monthly Food Budget\",\"limitAmount\":5000,\"period\":\"MONTHLY\",\"category\":\"FOOD_AND_DINING\"}" } } },
+        { "name": "POST /budgets - general budget counts all expenses", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/budgets", "body": { "mode": "raw", "raw": "{\"name\":\"Monthly General Budget\",\"limitAmount\":10000,\"period\":\"MONTHLY\",\"category\":\"GENERAL\"}" } } },
         { "name": "GET /budgets", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/budgets" } },
-        { "name": "GET /budgets/tracking", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/budgets/tracking" } },
-        { "name": "PUT /budgets/{budgetId}", "request": { "method": "PUT", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/budgets/{{budgetId}}", "body": { "mode": "raw", "raw": "{\"name\":\"Updated Monthly Food Budget\",\"limitAmount\":6000,\"period\":\"MONTHLY\",\"category\":\"Food\"}" } } },
+        { "name": "GET /budgets/tracking - verify matching categories", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/budgets/tracking" } },
+        { "name": "PUT /budgets/{budgetId}", "request": { "method": "PUT", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/budgets/{{budgetId}}", "body": { "mode": "raw", "raw": "{\"name\":\"Updated Monthly Food Budget\",\"limitAmount\":6000,\"period\":\"MONTHLY\",\"category\":\"FOOD_AND_DINING\"}" } } },
         { "name": "DELETE /budgets/{budgetId}", "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/budgets/{{budgetId}}" } }
       ]
     },
     {
       "name": "GROUP BUDGETS",
       "item": [
-        { "name": "POST /groups/{groupId}/budgets", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/groups/{{groupId}}/budgets", "body": { "mode": "raw", "raw": "{\"name\":\"Monthly Grocery Budget\",\"limitAmount\":5000,\"period\":\"MONTHLY\",\"category\":\"Grocery\"}" } } },
+        { "name": "POST /groups/{groupId}/budgets", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/groups/{{groupId}}/budgets", "body": { "mode": "raw", "raw": "{\"name\":\"Monthly Grocery Budget\",\"limitAmount\":5000,\"period\":\"MONTHLY\",\"category\":\"GROCERIES\"}" } } },
         { "name": "GET /groups/{groupId}/budgets", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/groups/{{groupId}}/budgets" } },
         { "name": "GET /groups/{groupId}/budgets/tracking", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/groups/{{groupId}}/budgets/tracking" } },
-        { "name": "PUT /groups/{groupId}/budgets/{budgetId}", "request": { "method": "PUT", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/groups/{{groupId}}/budgets/{{budgetId}}", "body": { "mode": "raw", "raw": "{\"name\":\"Updated Grocery Budget\",\"limitAmount\":6500,\"period\":\"MONTHLY\",\"category\":\"Grocery\"}" } } },
+        { "name": "PUT /groups/{groupId}/budgets/{budgetId}", "request": { "method": "PUT", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/groups/{{groupId}}/budgets/{{budgetId}}", "body": { "mode": "raw", "raw": "{\"name\":\"Updated Grocery Budget\",\"limitAmount\":6500,\"period\":\"MONTHLY\",\"category\":\"GROCERIES\"}" } } },
         { "name": "DELETE /groups/{groupId}/budgets/{budgetId}", "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/groups/{{groupId}}/budgets/{{budgetId}}" } }
       ]
     },

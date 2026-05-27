@@ -8,6 +8,7 @@ import edu.casas.budgetbuddy.features.transactions.TransactionsDtos.TransactionD
 import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore;
 import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore.TransactionRecord;
 import edu.casas.budgetbuddy.shared.persistence.DatabasePersistenceService;
+import edu.casas.budgetbuddy.shared.utils.CategoryUtils;
 import edu.casas.budgetbuddy.shared.utils.DomainException;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
@@ -41,12 +42,13 @@ public class TransactionsService {
     public synchronized TransactionDto create(Long userId, String type, BigDecimal amount,
                                               String category, String description, LocalDate date) {
         String normalizedType = normalizeType(type);
+        String normalizedCategory = CategoryUtils.require(category);
         TransactionRecord record = new TransactionRecord(store.transactionIds.getAndIncrement(), userId,
-                normalizedType, amount, category, description, date == null ? LocalDate.now() : date, false);
+                normalizedType, amount, normalizedCategory, description, date == null ? LocalDate.now() : date, false);
         store.transactions.add(record);
         databasePersistenceService.saveTransaction(record);
         activityService.log(userId, "CREATE_TRANSACTION", "TRANSACTION", record.id(),
-                "Created " + normalizedType.toLowerCase() + " " + category + " " + pesoFormat.format(amount));
+                "Created " + normalizedType.toLowerCase() + " " + normalizedCategory + " " + pesoFormat.format(amount));
         budgetsService.evaluatePersonalBudgets(userId);
         realtimeService.publish("dashboard-updated", toDto(record));
         return toDto(record);
@@ -91,6 +93,7 @@ public class TransactionsService {
     public synchronized TransactionDto update(Long userId, Long transactionId, String type, BigDecimal amount,
                                               String category, String description, LocalDate date) {
         String normalizedType = normalizeType(type);
+        String normalizedCategory = CategoryUtils.require(category);
         for (int index = 0; index < store.transactions.size(); index++) {
             TransactionRecord transaction = store.transactions.get(index);
             if (transaction.id().equals(transactionId) && !transaction.deleted()) {
@@ -98,12 +101,12 @@ public class TransactionsService {
                     throw new DomainException(HttpStatus.FORBIDDEN, "Cannot update another user's transaction");
                 }
                 TransactionRecord replacement = new TransactionRecord(transaction.id(), transaction.userId(),
-                        normalizedType, amount, category, description,
+                        normalizedType, amount, normalizedCategory, description,
                         date == null ? transaction.transactionDate() : date, false);
                 store.transactions.set(index, replacement);
                 databasePersistenceService.saveTransaction(replacement);
                 activityService.log(userId, "UPDATE_TRANSACTION", "TRANSACTION", replacement.id(),
-                        "Updated transaction " + category + " to " + pesoFormat.format(amount));
+                        "Updated transaction " + normalizedCategory + " to " + pesoFormat.format(amount));
                 budgetsService.evaluatePersonalBudgets(userId);
                 realtimeService.publish("dashboard-updated", toDto(replacement));
                 return toDto(replacement);

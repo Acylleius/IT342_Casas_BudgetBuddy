@@ -158,6 +158,46 @@ input:focus, select:focus, textarea:focus {
   margin-top: 8px;
 }
 
+.inbox-card {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.inbox-card.unread {
+  border-left: 5px solid var(--color-accent);
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.inbox-card.read {
+  opacity: 0.66;
+}
+
+.inbox-dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: var(--color-accent);
+}
+
+.inbox-card.read .inbox-dot {
+  background: var(--color-border);
+}
+
+.inbox-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
 .divider {
   display: flex;
   align-items: center;

@@ -13,6 +13,7 @@ import edu.casas.budgetbuddy.features.sharedexpenses.SharedExpensesDtos.SplitDto
 import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore;
 import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore.ExpenseSplitRecord;
 import edu.casas.budgetbuddy.shared.store.BudgetBuddyStore.SharedExpenseRecord;
+import edu.casas.budgetbuddy.shared.utils.CategoryUtils;
 import edu.casas.budgetbuddy.shared.utils.DomainException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -53,6 +54,7 @@ public class SharedExpensesService {
                                                 List<Long> participantUserIds) {
         groupsService.requireMember(groupId, requesterId);
         groupsService.requireMember(groupId, paidBy);
+        String normalizedCategory = CategoryUtils.require(category);
         LocalDate actualDate = expenseDate == null ? LocalDate.now() : expenseDate;
         if (actualDate.isAfter(LocalDate.now())) {
             throw new DomainException(HttpStatus.BAD_REQUEST, "Expense date cannot be in the future");
@@ -64,15 +66,15 @@ public class SharedExpensesService {
         BigDecimal splitAmount = amount.divide(BigDecimal.valueOf(participants.size()), 2, RoundingMode.HALF_UP);
 
         SharedExpenseRecord expense = new SharedExpenseRecord(store.expenseIds.getAndIncrement(), groupId,
-                paidBy, amount, category, description, actualDate, false);
+                paidBy, amount, normalizedCategory, description, actualDate, false);
         store.expenses.add(expense);
         participants.forEach(userId -> store.splits.add(new ExpenseSplitRecord(store.splitIds.getAndIncrement(),
                 expense.id(), userId, splitAmount, userId.equals(paidBy), userId.equals(paidBy) ? LocalDateTime.now() : null,
                 false)));
-        String descriptionText = actorName(requesterId) + " added " + category + " expense " + pesoFormat.format(amount);
+        String descriptionText = actorName(requesterId) + " added " + normalizedCategory + " expense " + pesoFormat.format(amount);
         activityService.log(requesterId, "CREATE_SHARED_EXPENSE", "SHARED_EXPENSE", expense.id(), descriptionText);
         notificationService.notifyGroupMembers(requesterId, groupId, notificationMessage(groupId,
-                actorName(requesterId) + " created a shared expense", category, null, amount));
+                actorName(requesterId) + " created a shared expense", normalizedCategory, null, amount));
         budgetsService.evaluateGroupBudgets(groupId);
         realtimeService.publish("shared-expenses-updated", toDto(expense));
         return toDto(expense);
@@ -116,6 +118,7 @@ public class SharedExpensesService {
     public synchronized SharedExpenseDto update(Long requesterId, Long expenseId, BigDecimal amount,
                                                 String category, String description, LocalDate expenseDate) {
         SharedExpenseRecord expense = requireExpense(expenseId);
+        String normalizedCategory = CategoryUtils.require(category);
         boolean admin = false;
         try {
             groupsService.requireAdmin(expense.groupId(), requesterId);
@@ -128,13 +131,13 @@ public class SharedExpensesService {
         }
         LocalDate actualDate = expenseDate == null ? expense.expenseDate() : expenseDate;
         SharedExpenseRecord replacement = new SharedExpenseRecord(expense.id(), expense.groupId(), expense.paidBy(),
-                amount, category, description, actualDate, false);
+                amount, normalizedCategory, description, actualDate, false);
         replaceExpense(replacement);
         activityService.log(requesterId, "UPDATE_SHARED_EXPENSE", "SHARED_EXPENSE", expense.id(),
-                actorName(requesterId) + " updated " + category + " from " + pesoFormat.format(expense.amount())
+                actorName(requesterId) + " updated " + normalizedCategory + " from " + pesoFormat.format(expense.amount())
                         + " to " + pesoFormat.format(amount));
         notificationService.notifyGroupMembers(requesterId, expense.groupId(), notificationMessage(expense.groupId(),
-                actorName(requesterId) + " updated a shared expense", category, expense.amount(), amount));
+                actorName(requesterId) + " updated a shared expense", normalizedCategory, expense.amount(), amount));
         budgetsService.evaluateGroupBudgets(expense.groupId());
         realtimeService.publish("shared-expenses-updated", toDto(replacement));
         return toDto(replacement);
